@@ -1,63 +1,11 @@
-#include <functional>
-#include <string>
-#include <type_traits>
-#include <iostream>
+#include "activation_function.cpp"
+
+#include <memory>
 
 #include <Eigen/Dense>
 
 using namespace std;
 using namespace Eigen;
-
-/**
- * @return `input` as itself
- */
-double identity(double input) {
-    return input;
-}
-
-/**
- * @return the constant value 1, regardless of the input's value
- * 
- * This is the derivative of the identity function, f(x)=x.
- */
-double one(double input) {
-    return 1;
-}
-
-
-/**
- * @return the Rectified Linear Unit (ReLU) function applied to `input`
- */
-double relu(double input) {
-    return input>=0 ? input : 0;
-}
-
-/**
- * @return the unit step function applied to `input`. 0 if `input` is negative, 1 otherwise.
- * 
- * This is the derivative of the Rectified Linear Unit (ReLU) function, with `unit_step(0)` defined to equal 1.
- */
-double unit_step(double input) {
-    return input>=0 ? 1 : 0;
-}
-
-
-/**
- * @return the sigmoid function applied to `input`
- */
-double sigmoid(double input) {  
-    return 1 / (1 + pow(2.71828182845, input * -1));
-}
-
-
-/**
- * @return the derivative of the sigmoid function applied to `input`
- */
-double sigmoid_derivative(double input) {  
-    return sigmoid(input) * (1 - sigmoid(input));
-}
-
-
 
 
 /**
@@ -68,7 +16,7 @@ struct LayerCache {
     Eigen::VectorXd pre_activation;
     Eigen::VectorXd post_activation;
 };
-
+//This should probably be put in network.cpp
 
 
 
@@ -77,7 +25,7 @@ struct LayerCache {
  */
 class Layer {
 
-    private:
+private:
     
     /**
      * Holds the per-neuron weights for this layer- does not contain biases.
@@ -91,14 +39,9 @@ class Layer {
 
 
     /**
-     * Activation function, to be applied element-wise to the output
+     * Activation function object
      */
-    function<double(double)> activation_fcn;
-
-    /**
-     * Activation function's derivative, to be applied element-wise during backpropagation
-     */
-    function<double(double)> activation_fcn_derivative;
+    shared_ptr<ActivationFunction> activation_fcn;
 
     
     /**
@@ -107,7 +50,7 @@ class Layer {
     string name;
 
 
-    public:
+public:
 
     /**
      * Creates a new Layer and initializes all fields. The activation function is set to the identity function, f(x)=x.
@@ -127,11 +70,9 @@ class Layer {
         biases  = MatrixXd::Random(output_dimension, 1);
         
         //set functions to default
-        activation_fcn = identity;
-        activation_fcn_derivative = one;
+        activation_fcn = make_shared<IdentityActivation>();
 
-        //initialize name and type
-
+        //initialize name
         name = layer_name;
     }
 
@@ -139,16 +80,13 @@ class Layer {
     /**
      * Creates a new Layer and loads it with the provided fields.
      * 
-     * The caller is responsible for ensuring that `activation_function_derivative` is truly the derivative of `activation_function`.
-     * 
      * @param input_dimension number of inputs that the Layer takes in. Must be positive.
      * @param output_dimension number of outputs that the Layer gives. Must be positive.
-     * @param activation_function activation function to be applied element-wise to the output
-     * @param activation_function_derivative derivative of `activation_function`, for backpropagation
+     * @param activation_function smart pointer to activation function object to use
      * @param name (default: "layer")- identifier for this Layer
      */
     Layer(int input_dimension, int output_dimension,
-        function<double(double)> activation_function, function<double(double)> activation_function_derivative,
+        shared_ptr<ActivationFunction> activation_function,
         string layer_name = "layer") {
 
         assert((input_dimension>0 && "Input vector's dimension must be positive"));
@@ -160,7 +98,6 @@ class Layer {
         
         //initialize activation function
         activation_fcn = activation_function;
-        activation_fcn_derivative = activation_function_derivative;
 
         //initialize name
         name = layer_name;
@@ -172,17 +109,10 @@ class Layer {
     //GETTERS
     
     /**
-     * @return the layer's activation function
+     * @return smart pointer to the layer's activation function
      */
-    function<double(double)> activation_function() {
+    shared_ptr<ActivationFunction> activation_function() const {
         return activation_fcn;
-    }
-
-    /**
-     * @return the derivative of the layer's activation function
-     */
-    function<double(double)> activation_function_derivative() {
-        return activation_fcn_derivative;
     }
 
     /**
@@ -264,7 +194,7 @@ class Layer {
 
         VectorXd output(input.rows());
         for(int i=0; i<input.rows(); i++) {
-            output(i) = activation_fcn(input(i));
+            output(i) = activation_fcn->compute(input(i));
         }
         return output;
     }

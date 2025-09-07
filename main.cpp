@@ -29,7 +29,9 @@ void test_xor_2layer() {
     VectorXd l1_biases(1);
     l1_biases << -0.6983648;
 
-    Layer l0 = Layer(2, 3, sigmoid, sigmoid_derivative, "l0");
+    shared_ptr<Sigmoid> sigmoid = make_shared<Sigmoid>();
+
+    Layer l0 = Layer(2, 3, sigmoid, "l0");
     Layer l1 = Layer(3, 1, "l1");
     l0.set_weight_matrix(l0_weights);
     l1.set_weight_matrix(l1_weights);
@@ -82,7 +84,8 @@ void test_xor_1layer() {
     VectorXd biases(1);
     biases << -0.19150648;
 
-    Layer layer = Layer(2, 1, sigmoid, sigmoid_derivative, "layer");
+    shared_ptr<Sigmoid> sigmoid = make_shared<Sigmoid>();
+    Layer layer = Layer(2, 1, sigmoid, "layer");
     layer.set_weight_matrix(weights);
     layer.set_bias_vector(biases);
 
@@ -120,5 +123,5 @@ void test_xor_1layer() {
 
 
 int main() {
-    test_xor_2layer();
+    test_xor_1layer();
 }

@@ -1,27 +1,7 @@
 #include "layer.cpp"
 #include "loss_calculator.cpp"
 
-#include <memory>
 #include <vector>
-
-
-/**
- * Returns the MSE derivative taken element-wise between `prediction` and `actual`.
- * 
- * Both inputs must be column vectors with the same dimension.
- */
-VectorXd mean_squared_error_deriv(const MatrixXd& prediction, const MatrixXd& actual) {
-    assert((prediction.cols() == 1 && "Prediction must be a column vector"));
-    assert((actual.cols() == 1 && "Actual must be a column vector"));
-    assert((prediction.rows() == actual.rows() && "Prediction and actual must have same number of rows"));
-
-    VectorXd output(prediction.rows());
-    for(int i=0; i<prediction.rows(); i++) {
-        output(i) = 1.0/prediction.rows() * (prediction(i) - actual(i));
-    }
-    return output;
-}
-
 
 
 
@@ -32,6 +12,8 @@ class Optimizer {
 public:
     /**
      * Not yet implemented.
+     * 
+     * Not intended to be called by a user.
      */
     virtual void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
         const MatrixXd& predictions, const MatrixXd& actuals, const shared_ptr<LossCalculator> loss_calculator) = 0;
@@ -69,56 +51,85 @@ public:
      */
     void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
         const MatrixXd& predictions, const MatrixXd& actuals, const shared_ptr<LossCalculator> loss_calculator) override {
-
-        const int N_NETWORK_LAYERS = layers.size();
         
         assert((predictions.cols() == 1 && "Predicted values must be a column vector"));
-        assert((predictions.rows() == layers[N_NETWORK_LAYERS-1].output_dimension() && "Predicted value vector must have dimension equal to the network's output dimension"));
+        assert((predictions.rows() == layers.back().output_dimension() && "Predicted value vector must have dimension equal to the network's output dimension"));
         assert((actuals.cols() == 1 && "Actual values must be a column vector"));
-        assert((actuals.rows() == layers[N_NETWORK_LAYERS-1].output_dimension() && "Actual value vector must have dimension equal to the network's output dimension"));
+        assert((actuals.rows() == layers.back().output_dimension() && "Actual value vector must have dimension equal to the network's output dimension"));
 
-        VectorXd delta = mean_squared_error_deriv(intermediate_outputs.back().post_activation, actuals);
+        VectorXd delta = loss_calculator->compute_loss_gradient(predictions, actuals);
         //or otherwise use the loss function's derivative
+        
+        //Get final layer's activation function
+        shared_ptr<ActivationFunction> final_activation_function = layers.back().activation_function();
+
 
         //Component-wise multiply to the element-wise differentiated final bias vector
-        if(true) { //Do this if not using both MSE loss and sigmoid activation
-            if(true) {
-                delta = delta.cwiseProduct(intermediate_outputs.back().post_activation.unaryExpr( layers.back().activation_function_derivative() ));
-            }
-            else { //Do this if using relu activation (or a pre-activation function)
-                delta = delta.cwiseProduct(intermediate_outputs.back().pre_activation.unaryExpr( layers.back().activation_function_derivative() ));
-            }
+        
+ 
+        //Do this if using a pre-activation function
+        if(final_activation_function->using_pre_activation()) {
+            delta = delta.cwiseProduct(
+                intermediate_outputs.back().pre_activation.unaryExpr(
+                    //Call the final layer's activation function's derivative on each element
+                    [&final_activation_function](double x) {
+                        return final_activation_function->compute_derivative(x);
+                    }
+                )
+            );
         }
-        //This is for MSE + sigmoid
-        else { 
-            delta = intermediate_outputs.back().post_activation - actuals;
+        //If using a post-activation function
+        else {
+            delta = delta.cwiseProduct(
+                intermediate_outputs.back().post_activation.unaryExpr(
+                    //Call the final layer's activation function's derivative on each element
+                    [final_activation_function](double x) {
+                        return final_activation_function->compute_derivative(x);
+                    }
+                )
+            );
         }
+        
+   
 
-        for(int l = N_NETWORK_LAYERS-1; l >= 0; l--) {
+        for(int l = layers.size()-1; l >= 0; l--) {
             VectorXd previous_post_activation = (l > 0) 
                 ? intermediate_outputs[l-1].post_activation
                 : initial_input;
-            
+
+            //propagate delta
+            VectorXd new_delta;
+            if(l > 0) {
+                MatrixXd current_weights = layers[l].weight_matrix();
+
+                VectorXd activation_derivative_input = layers[l-1].activation_function()->using_pre_activation()
+                    ? intermediate_outputs[l-1].pre_activation
+                    : intermediate_outputs[l-1].post_activation;
+
+                new_delta = (current_weights.transpose() * delta).cwiseProduct(
+                    activation_derivative_input.unaryExpr(
+                        [activation = layers[l-1].activation_function()](double x) {
+                            return activation->compute_derivative(x);
+                        }
+                    )
+                );
+            }
+
             //get gradients
             MatrixXd weight_changes = delta * previous_post_activation.transpose();
             VectorXd bias_changes = delta;
-
-            
-
-            //propagate delta
-            if(l > 0) {
-                MatrixXd current_weights = layers[l].weight_matrix();
-                delta = (current_weights.transpose() * delta)
-                .cwiseProduct(intermediate_outputs[l-1].post_activation.unaryExpr( layers[l-1].activation_function_derivative() ));
-            }
 
             //update weights and biases
             layers[l].set_weight_matrix( 
                 layers[l].weight_matrix() - (learn_rate * weight_changes)
             );
             layers[l].set_bias_vector(
-                layers[l].bias_vector() - (learn_rate * bias_changes)
+                (layers[l].bias_vector() - (learn_rate * bias_changes)).eval()
             );
+
+            if(l > 0) {
+                delta = new_delta;
+            }
         }
     }
 };

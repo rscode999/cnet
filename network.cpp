@@ -1,10 +1,5 @@
 #include "optimizer.cpp"
 
-#include <vector>
-#include <memory>
-
-#include <iostream>
-
 /**
  * Thrown to indicate that the model is not in the proper state to call a method.
  */
@@ -366,12 +361,6 @@ VectorXd forward(const MatrixXd& input) {
     for(int i=0; i<layers.size(); i++) {
         VectorXd pre_activation = layers[i].forward(current_layer_output);
         current_layer_output = layers[i].apply_activation(pre_activation);
-
-        // current_layer_output = layers[i].forward(current_layer_output);
-        // current_layer_output = layers[i].apply_activation(current_layer_output);
-
-        // cout << pre_activation << "\n" << endl;
-        // cout << current_layer_output << "\n" << endl;
         intermediate_outputs.push_back({pre_activation, current_layer_output});
     }
 
@@ -384,7 +373,7 @@ VectorXd forward(const MatrixXd& input) {
  * Not yet implemented
  */
 void reverse(const MatrixXd& predictions, const MatrixXd& actuals) {
-    //Put assertion that length of the intermediate outputs must equal the length of the layers
+    //Later: Put assertion that length of the intermediate outputs must equal the length of the layers
 
     optimizer->step(layers, initial_input, intermediate_outputs,
         predictions, actuals, loss_calculator);

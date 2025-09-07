@@ -1,15 +1,21 @@
-#include <Eigen/Dense>
-
 #include <string>
 
+#include <Eigen/Dense>
+
+using namespace std;
 using namespace Eigen;
 
 class LossCalculator {
+public:
 
     /**
-     * Returns the losses when measured between `predictions` and `actuals`.
+     * Returns the loss (error) when measured between `predictions` and `actuals`.
      * 
      * `predictions` and `actuals` must be column vectors with the same length.
+     * 
+     * @param predictions model's predictions for a given input
+     * @param actuals true values for model predictions
+     * @return calculator's loss of the model predictions
      */
     virtual double compute_loss(const MatrixXd& predictions, const MatrixXd& actuals) = 0;
 
@@ -17,11 +23,15 @@ class LossCalculator {
      * Returns the gradient of the losses when measured between `predictions` and `actuals`.
      * 
      * `predictions` and `actuals` must be column vectors with the same length.
+     * 
+     * @param predictions model's predictions for a given input
+     * @param actuals true values for model predictions
+     * @return calculator's loss gradient of the model predictions
      */
     virtual VectorXd compute_loss_gradient(const MatrixXd& predictions, const MatrixXd& actuals) = 0;
 
     /**
-     * Returns the identifying string of the loss calculator.
+     * @return the identifying string of the loss calculator
      */
     virtual string identifier() = 0;
 };
@@ -68,7 +78,7 @@ public:
         assert((actuals.cols() == 1 && "Actuals must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Predictions and actuals must have the same dimension for gradient calculation"));
 
-        return (2.0 / actuals.size()) * (predictions - actuals);
+        return(2.0 / predictions.rows())* (predictions - actuals);
     }
 
 
