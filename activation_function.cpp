@@ -188,4 +188,11 @@ public:
     string identifier() override {
         return "sigmoid";
     }
+
+    /**
+     * @return `true` (sigmoid is applied pre-activation during backpropagation)
+     */
+    bool using_pre_activation() override {
+        return true;
+    }
 };

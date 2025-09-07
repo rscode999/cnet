@@ -44,7 +44,7 @@ public:
  */
 class Network {
 
-public:
+private:
 
 
 /**
@@ -355,6 +355,8 @@ VectorXd forward(const MatrixXd& input) {
 
     intermediate_outputs.clear();
     intermediate_outputs.reserve(layers.size());
+
+    initial_input = input;
 
     //Pass input through all layers' forward operations
     VectorXd current_layer_output = input;

@@ -66,8 +66,8 @@ public:
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
-        weights = MatrixXd::Random(output_dimension, input_dimension);
-        biases  = MatrixXd::Random(output_dimension, 1);
+        weights = MatrixXd::Random(output_dimension, input_dimension) * 0.5;
+        biases  = MatrixXd::Random(output_dimension, 1) * 0.5;
         
         //set functions to default
         activation_fcn = make_shared<IdentityActivation>();
@@ -93,8 +93,8 @@ public:
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
-        weights = MatrixXd::Random(output_dimension, input_dimension);
-        biases  = MatrixXd::Random(output_dimension, 1);
+        weights = MatrixXd::Random(output_dimension, input_dimension) * 0.5;
+        biases  = MatrixXd::Random(output_dimension, 1) * 0.5;
         
         //initialize activation function
         activation_fcn = activation_function;

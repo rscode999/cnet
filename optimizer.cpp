@@ -29,22 +29,49 @@ public:
 class SGD : public Optimizer {
 
 private:
+    /**
+     * Loooool
+     */
+    struct MomentumCache {
+        MatrixXd weight_velocity;
+        VectorXd bias_velocity;
+
+        MomentumCache(int weight_rows, int weight_cols, int bias_size) {
+            weight_velocity = MatrixXd::Zero(weight_rows, weight_cols);
+            bias_velocity = VectorXd::Zero(bias_size);
+        }
+    };
 
     /**
      * Learning rate, dictating the speed of convergence step size. Must be positive.
      */
     double learn_rate;
 
+    /**
+     * Amount of momentum to use
+     */
+    double momentum_coeff;
+
+    /**
+     * Lmao cry
+     */
+    vector<MomentumCache> momentum_cache;
+
 public:
 
     /**
      * Creates a new SGD optimizer
      */
-    SGD(double learning_rate = 0.9) {
+    SGD(double learning_rate = 0.01, double momentum_coefficient = 0.9) {
         assert((learning_rate>0 && "Learning rate must be positive"));
+        assert((momentum_coefficient>0 && "Momentum coefficient must be positive"));
         learn_rate = learning_rate;
+        momentum_coeff = momentum_coefficient;
     }   
 
+    double lr() {
+        return learn_rate;
+    }
 
     /**
      * Not yet implemented!
@@ -56,6 +83,13 @@ public:
         assert((predictions.rows() == layers.back().output_dimension() && "Predicted value vector must have dimension equal to the network's output dimension"));
         assert((actuals.cols() == 1 && "Actual values must be a column vector"));
         assert((actuals.rows() == layers.back().output_dimension() && "Actual value vector must have dimension equal to the network's output dimension"));
+        
+        //Initialize momentums to all 0's (if not already initialized)
+        if(momentum_cache.size() == 0) {
+            for(Layer& layer : layers) {
+                momentum_cache.emplace_back(layer.output_dimension(), layer.input_dimension(), layer.output_dimension());
+            }
+        }
 
         VectorXd delta = loss_calculator->compute_loss_gradient(predictions, actuals);
         //or otherwise use the loss function's derivative
@@ -115,17 +149,17 @@ public:
                 );
             }
 
-            //get gradients
-            MatrixXd weight_changes = delta * previous_post_activation.transpose();
-            VectorXd bias_changes = delta;
+            MatrixXd weight_grad = delta * previous_post_activation.transpose();
+            VectorXd bias_grad   = delta;
 
-            //update weights and biases
-            layers[l].set_weight_matrix( 
-                layers[l].weight_matrix() - (learn_rate * weight_changes)
-            );
-            layers[l].set_bias_vector(
-                (layers[l].bias_vector() - (learn_rate * bias_changes)).eval()
-            );
+            MatrixXd& weight_velocity = momentum_cache[l].weight_velocity;
+            VectorXd& bias_velocity   = momentum_cache[l].bias_velocity;
+
+            weight_velocity = momentum_coeff * weight_velocity + learn_rate * weight_grad;
+            bias_velocity   = momentum_coeff * bias_velocity + learn_rate * bias_grad;
+
+            layers[l].set_weight_matrix(layers[l].weight_matrix() - weight_velocity);
+            layers[l].set_bias_vector((layers[l].bias_vector() - bias_velocity).eval());
 
             if(l > 0) {
                 delta = new_delta;

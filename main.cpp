@@ -123,5 +123,56 @@ void test_xor_1layer() {
 
 
 int main() {
-    test_xor_1layer();
+    Network net = Network();
+
+    shared_ptr<Sigmoid> sigmoid = make_shared<Sigmoid>();
+    Layer layer0 = Layer(2, 3, sigmoid, "layer0");
+    Layer layer1 = Layer(3, 1, "layer1");
+    net.add_layer(layer0);
+    net.add_layer(layer1);
+    sigmoid.reset();
+
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.02, 0.9);
+    shared_ptr<MSE> loss_calc = make_shared<MSE>();
+    
+    net.add_loss_calculator(loss_calc);
+    net.add_optimizer(optimizer);
+    optimizer.reset();
+    loss_calc.reset();
+
+    net.enable_training();
+
+
+    vector<VectorXd> inputs;
+    inputs.push_back(Vector2d(0,0));
+    inputs.push_back(Vector2d(0,1));
+    inputs.push_back(Vector2d(1,0));
+    inputs.push_back(Vector2d(1,1));
+
+    vector<VectorXd> correct_outputs;
+    for(int i=1; i<=4; i++) {
+        VectorXd out = VectorXd(1);
+        if(i==2 || i==3) {
+            out << 1;
+        }
+        else {
+            out << 0;
+        }
+        correct_outputs.push_back(out);
+    }
+
+    for(int e=1; e<=20000; e++) {
+        for(int i=0; i<inputs.size(); i++) {
+            VectorXd output = net.forward(inputs[i]);
+            net.reverse(output, correct_outputs[i]);
+        }
+
+        if(e%5000==0) {
+            for(int i=0; i<inputs.size(); i++) {
+                VectorXd output = net.forward(inputs[i]);
+                cout << output << "\n" << endl;
+            }
+            cout << "-----------------" << endl;
+        }
+    }
 }

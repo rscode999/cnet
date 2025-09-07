@@ -39,6 +39,36 @@ public:
 
 
 /**
+ * You think I have any idea what this does???
+ */
+class BinaryCrossEntropy : public LossCalculator {
+public:
+    double compute_loss(const MatrixXd& predictions, const MatrixXd& actuals) override {
+        assert(predictions.rows() == actuals.rows());
+        double loss = 0.0;
+        for (int i = 0; i < predictions.rows(); ++i) {
+            double y_hat = predictions(i, 0);
+            double y     = actuals(i, 0);
+            y_hat = std::min(std::max(y_hat, 1e-7), 1.0 - 1e-7); // Clamp for stability
+            loss += -y * log(y_hat) - (1 - y) * log(1 - y_hat);
+        }
+        return loss / predictions.rows();
+    }
+
+    VectorXd compute_loss_gradient(const MatrixXd& predictions, const MatrixXd& actuals) override {
+        assert(predictions.rows() == actuals.rows());
+        VectorXd grad = predictions.col(0) - actuals.col(0); // Simple difference
+        return grad;
+    }
+
+    string identifier() override {
+        return "binary_cross_entropy";
+    }
+};
+
+
+
+/**
  * Object that calculates Mean Squared Error (MSE) loss
  */
 class MSE : public LossCalculator {
