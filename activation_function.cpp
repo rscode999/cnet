@@ -5,7 +5,9 @@ using namespace std;
 
 
 /**
- * Abstract class. Holds an activation function, its derivative, and a unique identifier.
+ * Holds an activation function, its derivative, and a unique identifier.
+ * 
+ * Abstract class.
  */
 class ActivationFunction {
 public:
@@ -25,8 +27,10 @@ public:
     virtual double compute_derivative(double input) = 0;
 
     /**
-     * @return unique identifying string for the actuvation function.
+     * @return unique identifying string for the activation function.
      * If not overridden, returns `"no_identifier"`.
+     * 
+     * Typically an abbreviation of the activation function's name in all lowercase.
      */
     virtual string identifier()  {
         return "no_identifier";
@@ -51,12 +55,16 @@ public:
 
 
 
+/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+
+
 
 /**
  * A placeholder activation function. Does nothing to its inputs.
  * 
  * Its "activation function" is the identity function f(x)=x.
- * The derivative of the activation is f(x)=1.
+ * The derivative of the activation is f'(x)=1.
  */
 class IdentityActivation : public ActivationFunction {
 public:
@@ -77,7 +85,7 @@ public:
     }
 
     /**
-     * Returns the constant value 1.
+     * Returns the constant value 1, regardless of the input value.
      * @param input input value
      * @return 1.0
      */
@@ -86,10 +94,10 @@ public:
     }
 
     /**
-     * @return the string `"identity"`
+     * @return the string `"none"` (this is a placeholder activation function)
      */
     string identifier() override {
-        return "identity";
+        return "none";
     }
 };
 
@@ -120,7 +128,10 @@ public:
     }
 
     /**
-     * @brief Computes the unit step function, the derivative of the ReLU function, for the input.
+     * Computes the derivative of the ReLU function (the unit step function) for the input.
+     * 
+     * `compute_derivative(0)` is defined to be 0.
+     * 
      * @param input The input value
      * @return 1 if `input` > 0, else 0.
      */
@@ -137,7 +148,7 @@ public:
 
     /**
      * @return the Boolean value `true`.
-     * ReLU is best applied before activations are used.
+     * In backpropagation, ReLU is best applied before activations are used.
      */
     bool using_pre_activation() override {
         return true;

@@ -89,17 +89,19 @@ shared_ptr<Optimizer> optimizer;
  * a loss calculator and optimizer are defined,
  * and the input/output dimensions of each layer are compatible.
  */
-bool training_mode;
+bool train_mode;
 
 
 
 public:
 
 /**
- * Creates a new network with no defined layers or optimizer
+ * Creates an empty network.
+ * 
+ * The created network has no layers, loss calculator, or optimizer.
  */
 Network() {
-    training_mode = false;
+    train_mode = false;
 }
 
 
@@ -114,6 +116,7 @@ Network() {
  * 
  * @param layer_number layer number to access
  * @return biases of layer `layer_number`
+ * @throws `out_of_range` if `layer_number` is not on the interval [0, `{network}.n_layers()` - 1]
  */
 VectorXd biases_at(int layer_number) {
     if(layer_number<0 || layer_number>=layers.size()) {
@@ -139,9 +142,42 @@ int input_dimension() {
 
 
 /**
+ * @return deep copy of the layer at `layer_number` (0-based indexing). Must be between 0 and `{network}.n_layers()`-1
+ */
+Layer layer_at(int layer_number) {
+    assert((layer_number>=0 && layer_number<n_layers() && "Layer number must be between 0 and (number of layers)-1, inclusive on both ends"));
+    return layers[layer_number];
+}
+
+
+
+/**
+ * Returns the layer whose name is `layer_name`.
+ * 
+ * The first matching layer name is returned.
+ * 
+ * If no layer with `layer_name` is found, throws std::out_of_range.
+ * 
+ * @param layer_name name of layer to find
+ * @return layer with the lowest index whose name is `layer_name`
+ * @throws `out_of_range` if no matching layer name is found
+ */
+Layer layer_at(string layer_name) {
+    for(Layer l : layers) {
+        if(l.name() == layer_name) {
+            return l;
+        }
+    }
+
+    throw out_of_range("Could not find any matching layers with the given name");
+}
+
+
+
+/**
  * @return the number of layers in the network
  */
-int n_layers() {
+int n_layers() const {
     return layers.size();
 }
 
@@ -161,12 +197,25 @@ int output_dimension() {
 
 
 /**
+ * @return whether the network is in training mode
+ */
+bool training_mode() {
+    return train_mode;
+}
+
+
+
+/**
  * Returns a deep copy of the weight matrix in layer `layer_number`.
  * 
  * Layers use 0-based indexing. The first layer is at layer number 0.
  * 
+ * If `layer_number` is not between 0 and `{network}.n_layers()`-1, inclusive on both sides,
+ * the method throws std::out_of_range.
+ * 
  * @param layer_number layer number to access
  * @return weights of layer `layer_number`
+ * @throws `out_of_range` if `layer_number` is not a valid index number
  */
 MatrixXd weights_at(int layer_number) {
     if(layer_number<0 || layer_number>=layers.size()) {
@@ -178,7 +227,7 @@ MatrixXd weights_at(int layer_number) {
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-//SETTERS
+//SETTERS (DOES NOT INCLUDE WHOLE LAYER OPERATIONS)
 
 /**
  * Sets the bias vector at layer `layer_number` to `new_biases`.
@@ -196,8 +245,8 @@ void set_biases_at(int layer_number, MatrixXd new_biases) {
     assert((new_biases.rows() == layers[layer_number].output_dimension() && "New bias vector's number of rows must equal the selected layer's output dimension"));
     assert((new_biases.cols() == 1 && "New biases must be a column vector"));
 
-    if(training_mode) {
-        throw illegal_state("Cannot update biases in training mode");
+    if(train_mode) {
+        throw illegal_state("Cannot manually set bias vectors in training mode");
     }
 
     layers[layer_number].set_bias_vector(new_biases);
@@ -220,8 +269,8 @@ void set_weights_at(int layer_number, MatrixXd new_weights) {
     assert((new_weights.rows() == layers[layer_number].output_dimension() && "New weight matrix's row count must equal the layer's output dimension"));
     assert((new_weights.cols() == layers[layer_number].input_dimension() && "New weight matrix's column count must equal the layer's input dimension"));
    
-    if(training_mode) {
-        throw illegal_state("Cannot update weights in training mode");
+    if(train_mode) {
+        throw illegal_state("Cannot manually set weight matrices in training mode");
     }
 
     layers[layer_number].set_weight_matrix(new_weights);
@@ -237,18 +286,18 @@ void set_weights_at(int layer_number, MatrixXd new_weights) {
 
 
 /**
- * Adds `new_layer` as the final layer of the network.
+ * Adds `new_layer` to the back of the network.
  * 
  * If the network is in training mode, this method throws `illegal_state`.
  * 
  * @param new_layer layer to add
- * @throws illegal_state if the network is in training mode
+ * @throws `illegal_state` if the network is in training mode
  */
 void add_layer(Layer new_layer) {
     //NO REFERENCES! The user can change the layers if so.
 
-    if(training_mode) {
-        throw illegal_state("Network must not be ready for training to add a layer");
+    if(train_mode) {
+        throw illegal_state("Network must not be in training mode to add a layer");
     }
     layers.push_back(new_layer);
 }
@@ -256,7 +305,41 @@ void add_layer(Layer new_layer) {
 
 
 /**
- * Replaces the curent loss calculator with `new_calculator`.
+ * Adds a new layer to the back of the network.
+ * The new layer has `input_dimension` inputs, `output_dimension` outputs, and a name of `name`.
+ * 
+ * The layer does not have an activation function.
+ * 
+ * @param input_dimension dimension of the layer's input
+ * @param output_dimension dimension of the layer's output
+ * @param name name of the layer. Default: `"layer"`
+ */
+void add_layer(int input_dimension, int output_dimension, string name="layer") {
+    Layer new_layer = Layer(input_dimension, output_dimension, name);
+    layers.push_back(new_layer);
+}
+
+
+
+/**
+ * Adds a new layer to the back of the network.
+ * The new layer has `input_dimension` inputs, `output_dimension` outputs, 
+ * an activation function of `activation_function`. and a name of `name`.
+ * 
+ * @param input_dimension dimension of the layer's input
+ * @param output_dimension dimension of the layer's output
+ * @param activation_function smart pointer to activation function of the new layer
+ * @param name name of the layer. Default: `"layer"`
+ */
+void add_layer(int input_dimension, int output_dimension, shared_ptr<ActivationFunction> activation_function, string name="layer") {
+    Layer new_layer = Layer(input_dimension, output_dimension, activation_function, name);
+    layers.push_back(new_layer);
+}
+
+
+
+/**
+ * Replaces the current loss calculator with `new_calculator`.
  * If no loss calculator is defined yet, the defined loss calculator becomes `new_calculator`.
  * 
  * If the network is in training mode, this method throws `illegal_state`.
@@ -265,8 +348,13 @@ void add_layer(Layer new_layer) {
  * @throws `illegal_state` if the network is in training mode
  */
 void add_loss_calculator(shared_ptr<LossCalculator> new_calculator) {
-    if(training_mode) {
+    if(train_mode) {
         throw illegal_state("Network must not be ready for training to update the loss calculator");
+    }
+
+    //Free any existing loss calculator
+    if(loss_calculator) {
+        loss_calculator.reset();
     }
     loss_calculator = new_calculator;
 }
@@ -283,10 +371,27 @@ void add_loss_calculator(shared_ptr<LossCalculator> new_calculator) {
  * @throws `illegal_state` if the network is in training mode
  */
 void add_optimizer(shared_ptr<Optimizer> new_optimizer) {
-    if(training_mode) {
+    if(train_mode) {
         throw illegal_state("Network must not be ready for training to update the optimizer");
     }
+
+    //Free any existing loss calculator
+    if(optimizer) {
+        optimizer.reset();
+    }
     optimizer = new_optimizer;
+}
+
+
+
+/**
+ * Disables Training Mode for this network, allowing the network to be edited.
+ * 
+ * Also removes unnecessary memory usage accumulated during training.
+ */
+void disable_training() {
+    intermediate_outputs.clear();
+    train_mode = false;
 }
 
 
@@ -330,7 +435,7 @@ void enable_training() {
     //Initialize input vector and intermediate outputs
     initial_input = VectorXd(input_dimension());
     intermediate_outputs.clear();
-    training_mode = true;
+    train_mode = true;
 }
 
 
@@ -338,32 +443,39 @@ void enable_training() {
 /**
  * Returns the forward operation for the given input, i.e. the network's predictions for `input`.
  * 
+ * If `training` is true, the network internally tracks layer outputs for training.
+ * 
  * If the network is not in training mode, this method throws `illegal_state`.
  * 
  * @param input input to the network. Must have `{networkName}.input_dimension()` rows and 1 column
+ * @param training true if  training the network, false if getting results for evaluation only. Default: `true`
  * @return the network's output, as a VectorXd of dimension `{networkName}.output_dimension()`
  * @throws `illegal_state` if the network is not in training mode
  */
-VectorXd forward(const MatrixXd& input) {
+VectorXd forward(const MatrixXd& input, bool training = true) {
     assert((input.cols() == 1 && "Input to forward operation must be a column vector"));
     assert((input.rows() == input_dimension() && "Input to forward operation must have same dimension as the network's input"));
     
     //Training mode check
-    if(!training_mode) {
+    if(!train_mode) {
         throw illegal_state("Forward operation requires the network to be in training mode");
     }
 
-    intermediate_outputs.clear();
-    intermediate_outputs.reserve(layers.size());
-
-    initial_input = input;
+    if(training) {
+        intermediate_outputs.clear();
+        intermediate_outputs.reserve(layers.size());
+        initial_input = input;
+    }
 
     //Pass input through all layers' forward operations
     VectorXd current_layer_output = input;
     for(int i=0; i<layers.size(); i++) {
         VectorXd pre_activation = layers[i].forward(current_layer_output);
         current_layer_output = layers[i].apply_activation(pre_activation);
-        intermediate_outputs.push_back({pre_activation, current_layer_output});
+
+        if(training) {
+            intermediate_outputs.push_back({pre_activation, current_layer_output});
+        }
     }
 
     return current_layer_output;
@@ -372,13 +484,142 @@ VectorXd forward(const MatrixXd& input) {
 
 
 /**
- * Not yet implemented
+ * Inserts `new_layer` at position `new_pos` in the network.
+ * All layers at or after `new_pos` are moved one position backwards.
+ * 
+ * Inserting at position `{network}.n_layers()` will put the new layer at the end of the network.
+ * 
+ * Execution time scales linearly with the network's number of layers.
+ * 
+ * Network layers use 0-based indexing. The first layer is at index 0.
+ * 
+ * @param new_pos new position number to insert the layer. Must be between 0 and `{network}.n_layers()`, inclusive on both sides
+ * @param new_layer layer to insert at position `new_pos`
+ * @throws `illegal_state` if this method is called while in training mode
+ */
+void insert_layer(int new_pos, Layer new_layer) {
+    assert((new_pos>=0 && new_pos<=n_layers() && "New layer insertion position must be between 0 and (number of layers)"));
+    if(train_mode) {
+        throw illegal_state("Cannot insert a new layer while in training mode");
+    }
+
+    layers.insert(layers.begin() + new_pos, new_layer);
+}
+
+
+
+/**
+ * Removes the layer at position `remove_pos`.
+ * 
+ * @param remove_pos layer number to remove. Must be between 0 and `{network}.n_layers()`-1
+ */
+void remove_layer(int remove_pos) {
+    assert((remove_pos>=0 && remove_pos<n_layers() && "Remove position must be between 0 and (number of layers)-1"));
+    layers.erase(layers.begin() + remove_pos);
+}
+
+
+
+/**
+ * Removes the layer whose name is `removal_name`.
+ * 
+ * The first layer in the network whose name matches (i.e. the layer with the lowest index)
+ * will be removed.
+ * 
+ * If there are no matches, throws std::out_of_range.
+ * 
+ * @param layer_name layer name to remove
+ * @throws `out_of_range` if no layer's name matches `removal_name`
+ */
+void remove_layer(string layer_name) {
+    for(int i=0; i<layers.size(); i++) {
+        if(layers[i].name() == layer_name) {
+            layers.erase(layers.begin() + i);
+            return;
+        }
+    }
+    throw out_of_range("No matches found");
+}
+
+
+
+/**
+ * Updates the weights and biases of this network using `predictions` and `actuals`.
+ * 
+ * The network's optimizer uses the loss calculator for the updating.
+ * 
+ * @param predictions what the network predicts for a given input
+ * @param actuals expected output for the network's prediction
  */
 void reverse(const MatrixXd& predictions, const MatrixXd& actuals) {
-    //Later: Put assertion that length of the intermediate outputs must equal the length of the layers
+    assert((predictions.cols() == 1 && "Reverse process predictions must be a column vector"));
+    assert((actuals.cols() == 1 && "Reverse process actuals must be a column vector"));
+    assert((predictions.rows() == output_dimension() && "Reverse process predictions length must equal network's output dimension"));
+    assert((actuals.rows() == output_dimension() && "Reverse process actuals length must equal network's output dimension"));
 
+    //Use the network's optimizer
     optimizer->step(layers, initial_input, intermediate_outputs,
         predictions, actuals, loss_calculator);
 }
 
+
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+//OPERATOR OVERRIDES
+
+/**
+ * Adds `new_layer` as the final layer of the network.
+ * 
+ * If the network is in training mode, this method throws `illegal_state`.
+ * 
+ * Equivalent to `{network}.add_layer(new_layer)`.
+ * 
+ * @param new_layer layer to add
+ * @throws illegal_state if the network is in training mode
+ */
+void operator+(Layer new_layer) {
+    if(train_mode) {
+        throw illegal_state("(+ operator) Cannot add layer while in training mode");
+    }
+    add_layer(new_layer);
+}
+
+
+
+/**
+ * Returns an output stream containing `network` added to the output stream `os`.
+ * 
+ * The output stream will contain all layers converted to strings, separated by newlines.
+ * @param os output stream to export to
+ * @param network network to export
+ * @return new output stream containing the network's information inside
+ */
+friend std::ostream& operator<<(std::ostream& os, const Network& network);
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+//DESTRUCTOR
+
+/**
+ * Properly destroys a Network.
+ */
+~Network() {
+    loss_calculator.reset();
+    optimizer.reset();
+}
+
 };
+
+
+
+std::ostream& operator<<(std::ostream& os, const Network& network) {
+    
+    os << "Network, " << network.n_layers() << " layers:\n";
+    for(Layer l : network.layers) {
+        os << l << "\n";
+    }
+    return os;
+}

@@ -10,14 +10,32 @@
  */
 class Optimizer {
 public:
+
     /**
-     * Not yet implemented.
+     * @return the optimizer's identifying string. If not overridden, returns `"optimizer"`.
+     */
+    virtual string identifier() {
+        return "optimizer";
+    }
+
+    /**
+     * Updates `layers` using the optimizer's method.
      * 
-     * Not intended to be called by a user.
+     * Used internally by a Network. Not intended to be called by a user.
+     * 
+     * @param layers vector of layers to optimize
+     * @param initial_input value that was first given to the network
+     * @param intermediate_outputs outputs of each layer before and after the layer's activation function is applied
+     * @param predictions the output of the network for `initial_input`
+     * @param actuals what the network should predict for `initial_input`
+     * @param loss_calculator smart pointer to loss calculator object
      */
     virtual void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
         const MatrixXd& predictions, const MatrixXd& actuals, const shared_ptr<LossCalculator> loss_calculator) = 0;
-
+    
+    /**
+     * Properly destroys an Optimizer.
+     */
     virtual ~Optimizer() = default;
 };
 
@@ -30,7 +48,7 @@ class SGD : public Optimizer {
 
 private:
     /**
-     * Loooool
+     * Struct to store weight and bias velocities for momentum SGD
      */
     struct MomentumCache {
         MatrixXd weight_velocity;
@@ -43,7 +61,7 @@ private:
     };
 
     /**
-     * Learning rate, dictating the speed of convergence step size. Must be positive.
+     * Learning rate, dictating the optimization step size. Must be positive.
      */
     double learn_rate;
 
@@ -53,7 +71,7 @@ private:
     double momentum_coeff;
 
     /**
-     * Lmao cry
+     * Holds matrices and vectors 
      */
     vector<MomentumCache> momentum_cache;
 
@@ -61,20 +79,35 @@ public:
 
     /**
      * Creates a new SGD optimizer
+     * 
+     * @param learning_rate learning rate, for determining speed of convergence.  Default 0.01. Must be positive
+     * @param momentum_coefficient for determining amount of momentum to use. Default 0.9. Cannot be negative
      */
     SGD(double learning_rate = 0.01, double momentum_coefficient = 0.9) {
         assert((learning_rate>0 && "Learning rate must be positive"));
-        assert((momentum_coefficient>0 && "Momentum coefficient must be positive"));
+        assert((momentum_coefficient>=0 && "Momentum coefficient cannot be negative"));
         learn_rate = learning_rate;
         momentum_coeff = momentum_coefficient;
     }   
 
-    double lr() {
-        return learn_rate;
-    }
 
     /**
-     * Not yet implemented!
+     * @return `"sgd"`, the optimizer's identifying string
+     */
+    string identifier() override {
+        return "sgd";
+    }
+
+
+    /**
+     * Updates `layers` using SGD optimization
+     * 
+     * @param layers vector of layers to optimize
+     * @param initial_input value that was first given to the network
+     * @param intermediate_outputs outputs of each layer before and after the layer's activation function is applied
+     * @param predictions the output of the network for `initial_input`
+     * @param actuals what the network should predict for `initial_input`
+     * @param loss_calculator smart pointer to loss calculator object
      */
     void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
         const MatrixXd& predictions, const MatrixXd& actuals, const shared_ptr<LossCalculator> loss_calculator) override {
@@ -100,8 +133,7 @@ public:
 
         //Component-wise multiply to the element-wise differentiated final bias vector
         
- 
-        //Do this if using a pre-activation function
+        //Pre-activation 
         if(final_activation_function->using_pre_activation()) {
             delta = delta.cwiseProduct(
                 intermediate_outputs.back().pre_activation.unaryExpr(
@@ -112,7 +144,7 @@ public:
                 )
             );
         }
-        //If using a post-activation function
+        //Post-activation
         else {
             delta = delta.cwiseProduct(
                 intermediate_outputs.back().post_activation.unaryExpr(
@@ -125,8 +157,9 @@ public:
         }
         
    
-
+        //update remaining layers
         for(int l = layers.size()-1; l >= 0; l--) {
+            //Get original post-activation of the previous layer
             VectorXd previous_post_activation = (l > 0) 
                 ? intermediate_outputs[l-1].post_activation
                 : initial_input;
@@ -136,34 +169,49 @@ public:
             if(l > 0) {
                 MatrixXd current_weights = layers[l].weight_matrix();
 
-                VectorXd activation_derivative_input = layers[l-1].activation_function()->using_pre_activation()
+                VectorXd current_intermediate_output = layers[l-1].activation_function()->using_pre_activation()
                     ? intermediate_outputs[l-1].pre_activation
                     : intermediate_outputs[l-1].post_activation;
+                
+                //apply previous layer's activation function derivative to each intermediate output element
+                current_intermediate_output = current_intermediate_output.unaryExpr(
+                    [activation = layers[l-1].activation_function()](double x) {
+                        return activation->compute_derivative(x);
+                    }
+                );
 
+                /*
+                do backpropagation
+                update new delta with product of current weights and previous intermediate output 
+                (with activation deriv. applied to each element)
+                */
                 new_delta = (current_weights.transpose() * delta).cwiseProduct(
-                    activation_derivative_input.unaryExpr(
-                        [activation = layers[l-1].activation_function()](double x) {
-                            return activation->compute_derivative(x);
-                        }
-                    )
+                    current_intermediate_output
                 );
             }
-
+            
+            //weight gradient = outer product of delta and previous layer's post activation outputs
             MatrixXd weight_grad = delta * previous_post_activation.transpose();
+            //bias gradient = delta as itself
             VectorXd bias_grad   = delta;
 
+            //get current momentums for weights and biases
             MatrixXd& weight_velocity = momentum_cache[l].weight_velocity;
             VectorXd& bias_velocity   = momentum_cache[l].bias_velocity;
 
+            //update weight
             weight_velocity = momentum_coeff * weight_velocity + learn_rate * weight_grad;
             bias_velocity   = momentum_coeff * bias_velocity + learn_rate * bias_grad;
 
+            //update layer weights
             layers[l].set_weight_matrix(layers[l].weight_matrix() - weight_velocity);
             layers[l].set_bias_vector((layers[l].bias_vector() - bias_velocity).eval());
-
+            
+            //update delta
             if(l > 0) {
                 delta = new_delta;
             }
         }
     }
+
 };

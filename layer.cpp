@@ -21,7 +21,9 @@ struct LayerCache {
 
 
 /**
- * Represents a layer in a network. Can be an input, hidden layer, or output.
+ * Represents a layer in a network. 
+ * 
+ * Can be an input, hidden layer, or output.
  */
 class Layer {
 
@@ -39,7 +41,7 @@ private:
 
 
     /**
-     * Activation function object
+     * Smart pointer to activation function object
      */
     shared_ptr<ActivationFunction> activation_fcn;
 
@@ -47,7 +49,7 @@ private:
     /**
      * Identifier for this layer
      */
-    string name;
+    string layer_name;
 
 
 public:
@@ -59,21 +61,21 @@ public:
      * 
      * @param input_dimension number of inputs that the Layer takes in. Must be positive.
      * @param output_dimension number of outputs that the Layer gives. Must be positive.
-     * @param name (default: "layer")- identifier for this Layer
+     * @param name identifier for this Layer. Default: `"layer"`
      */
-    Layer(int input_dimension, int output_dimension, string layer_name = "layer") {
+    Layer(int input_dimension, int output_dimension, string name = "layer") {
         assert((input_dimension>0 && "Input vector's dimension must be positive"));
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
-        weights = MatrixXd::Random(output_dimension, input_dimension) * 0.5;
-        biases  = MatrixXd::Random(output_dimension, 1) * 0.5;
+        weights = MatrixXd::Random(output_dimension, input_dimension);
+        biases  = MatrixXd::Random(output_dimension, 1);
         
         //set functions to default
         activation_fcn = make_shared<IdentityActivation>();
 
         //initialize name
-        name = layer_name;
+        this->layer_name = name;
     }
 
 
@@ -83,11 +85,11 @@ public:
      * @param input_dimension number of inputs that the Layer takes in. Must be positive.
      * @param output_dimension number of outputs that the Layer gives. Must be positive.
      * @param activation_function smart pointer to activation function object to use
-     * @param name (default: "layer")- identifier for this Layer
+     * @param name identifier for this Layer. Default: `"layer"`
      */
     Layer(int input_dimension, int output_dimension,
         shared_ptr<ActivationFunction> activation_function,
-        string layer_name = "layer") {
+        string name = "layer") {
 
         assert((input_dimension>0 && "Input vector's dimension must be positive"));
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
@@ -100,7 +102,7 @@ public:
         activation_fcn = activation_function;
 
         //initialize name
-        name = layer_name;
+        this->layer_name = name;
     }
 
 
@@ -111,7 +113,7 @@ public:
     /**
      * @return smart pointer to the layer's activation function
      */
-    shared_ptr<ActivationFunction> activation_function() const {
+    const shared_ptr<ActivationFunction> activation_function() const {
         return activation_fcn;
     }
 
@@ -140,8 +142,8 @@ public:
     /**
      * @return the layer's name
      */
-    string layer_name() {
-        return name;
+    string name() {
+        return layer_name;
     }
 
     /**
@@ -220,4 +222,20 @@ public:
 
         return (weights * input) + biases;
     }
+
+
+    /**
+     * Returns an output stream containing `layer` added to the output stream `os`.
+     * @param os output stream to export to
+     * @param layer layer to export
+     * @return new output stream containing the layer's information inside
+     */
+    friend std::ostream& operator<<(std::ostream& os, const Layer& layer);
 };
+
+
+std::ostream& operator<<(std::ostream& os, const Layer& layer) {
+    os << "Layer \"" << layer.layer_name << "\" (" << layer.weights.cols() << ", " << layer.weights.rows() 
+        << "), activation function: " << layer.activation_fcn->identifier();
+    return os;
+}

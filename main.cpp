@@ -39,7 +39,7 @@ void test_xor_2layer() {
     l1.set_bias_vector(l1_biases);
 
     shared_ptr<SGD> sgd = make_shared<SGD>();
-    shared_ptr<MSE> mse = make_shared<MSE>();
+    shared_ptr<MeanSquaredError> mse = make_shared<MeanSquaredError>();
     Network net;
     net.add_loss_calculator(mse);
     net.add_optimizer(sgd);
@@ -91,7 +91,7 @@ void test_xor_1layer() {
 
     Network net = Network();
     shared_ptr<SGD> optimizer = make_shared<SGD>();
-    shared_ptr<MSE> loss_calc = make_shared<MSE>();
+    shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>();
     net.add_layer(layer);
     net.add_loss_calculator(loss_calc);
     net.add_optimizer(optimizer);
@@ -121,19 +121,21 @@ void test_xor_1layer() {
 
 
 
-
-int main() {
+/**
+ * Creates a new model, trains it on the XOR dataset, then evaluates its predictions
+ */
+void test_training_xor() {
     Network net = Network();
 
     shared_ptr<Sigmoid> sigmoid = make_shared<Sigmoid>();
-    Layer layer0 = Layer(2, 3, sigmoid, "layer0");
-    Layer layer1 = Layer(3, 1, "layer1");
+    Layer layer0 = Layer(2, 4, sigmoid, "layer0");
+    Layer layer1 = Layer(4, 1, "layer1");
     net.add_layer(layer0);
     net.add_layer(layer1);
     sigmoid.reset();
 
-    shared_ptr<SGD> optimizer = make_shared<SGD>(0.02, 0.9);
-    shared_ptr<MSE> loss_calc = make_shared<MSE>();
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.02, 0.9); //Learning rate 0.02, momentum 0.9
+    shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>();
     
     net.add_loss_calculator(loss_calc);
     net.add_optimizer(optimizer);
@@ -142,13 +144,14 @@ int main() {
 
     net.enable_training();
 
-
+    //Add XOR inputs
     vector<VectorXd> inputs;
     inputs.push_back(Vector2d(0,0));
     inputs.push_back(Vector2d(0,1));
     inputs.push_back(Vector2d(1,0));
     inputs.push_back(Vector2d(1,1));
 
+    //Add corresponding outputs
     vector<VectorXd> correct_outputs;
     for(int i=1; i<=4; i++) {
         VectorXd out = VectorXd(1);
@@ -161,18 +164,170 @@ int main() {
         correct_outputs.push_back(out);
     }
 
-    for(int e=1; e<=20000; e++) {
+    //Train for 2000 epochs
+    const int N_EPOCHS = 2000;
+    for(int e=1; e<=N_EPOCHS; e++) {
         for(int i=0; i<inputs.size(); i++) {
             VectorXd output = net.forward(inputs[i]);
             net.reverse(output, correct_outputs[i]);
         }
+    }
 
-        if(e%5000==0) {
-            for(int i=0; i<inputs.size(); i++) {
-                VectorXd output = net.forward(inputs[i]);
-                cout << output << "\n" << endl;
-            }
-            cout << "-----------------" << endl;
+    cout << N_EPOCHS << " epochs:\n" << endl;
+
+    VectorXd in(2);
+    in << 0,0;
+    cout << "Results for 0,0:  " << net.forward(in, false) << endl;
+    cout << "Expected for 0,0: 0\n" << endl;
+
+    in << 0,1;
+    cout << "Results for 0,1:  " << net.forward(in, false) << endl;
+    cout << "Expected for 0,1: 1\n" << endl;
+
+    in << 1,0;
+    cout << "Results for 1,0:  " << net.forward(in, false) << endl;
+    cout << "Expected for 1,0: 1\n" << endl;
+
+    in << 1,1;
+    cout << "Results for 1,1:  " << net.forward(in, false) << endl;
+    cout << "Expected for 1,1: 0" << endl;
+}
+
+
+
+/**
+ * Returns a VectorXd representing `decimal_number` as a binary number with `n_bits` bits.
+ * 
+ * The most significant digit is the highest index number of the output.
+ * 
+ * Helper to `test_training_binconvert`
+ * 
+ * @param n_bits number of bits in the binary number. Must be positive
+ * @param decimal_number number to convert to binary. Must be on the interval [0, 2^`n_bits`-1]
+ * @return `decimal_number` in binary
+ */
+VectorXd decimal_to_binary(int n_bits, int decimal_number) {
+    assert((n_bits>0 && "Number of bits for dec->bin conversion must be positive"));
+    assert((decimal_number>=0 && decimal_number<(int)pow(2, n_bits) && "Decimal number must be between 0 and 2^n_bits-1"));
+
+    VectorXd output(n_bits);
+    int current = decimal_number;
+    for(int i=0; i<output.size(); i++) {
+        output(i) = current % 2;
+        current = current / 2;
+    }
+
+    return output;
+}
+
+/**
+ * Returns a VectorXd of length `n_indices`. All indices are 0 except for index `input`, which is 1.
+ * 
+ * Helper to `test_training_binconvert`
+ * 
+ * @param n_indices number of indices in the output
+ * @param input the index to make 1. Must be between 0 and `n_indices`-1
+ * @return one-hot VectorXd of length `n_indices`
+ */
+VectorXd one_hot_vectorxd(int n_indices, int input) {
+    assert((input>=0 && input<n_indices && "input for one-hot conversion must be between 0 and n_indices-1"));
+
+    VectorXd output(n_indices);
+    for(int i=0; i<output.size(); i++) {
+        output(i) = (i==input) ? 1 : 0;
+    }
+    return output;
+}
+
+
+/**
+ * Creates and trains a model to convert an input, in binary, to a one-hot output.
+ */
+void test_training_binconvert() {
+    const int N_INPUTS = 5; //Arbitary positive constant
+    const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
+    const int N_EPOCHS = 2000; //Positive constant
+
+    Network net = Network();
+
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.02, 0.9); //learning rate=0.02, momentum=0.9
+    net.add_optimizer(optimizer);
+    optimizer.reset();
+
+    shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>();
+    net.add_loss_calculator(loss_calc);
+    //Keep the loss calculator outside the network for per-epoch loss calculations
+
+    //add layers
+    shared_ptr<Sigmoid> sigmoid_activ = make_shared<Sigmoid>();
+    net.add_layer(N_INPUTS, 10, sigmoid_activ, "layer0");
+    net.add_layer(10, 20, sigmoid_activ, "layer1");
+    net.add_layer(20, 40, sigmoid_activ, "layer2");
+    net.add_layer(40, N_OUTPUTS, "layer3");
+    sigmoid_activ.reset();
+
+
+    //get inputs and corresponding expected outputs
+    vector<VectorXd> inputs;
+    vector<VectorXd> expected_outputs;
+    for(int i=0; i<N_OUTPUTS; i++) {
+        VectorXd current_input = decimal_to_binary(N_INPUTS, i);
+        inputs.push_back(current_input);
+
+        VectorXd current_output = one_hot_vectorxd(N_OUTPUTS, i);
+        expected_outputs.push_back(current_output);
+    }
+
+    //enable training
+    net.enable_training();
+
+    cout << "Training started for " << N_INPUTS << " inputs, " << N_EPOCHS << " epochs" << endl;
+
+    //train
+    for(int e=1; e<=N_EPOCHS; e++) {
+        double current_loss = 0;
+        for(int i=0; i<inputs.size(); i++) {
+            VectorXd current_result = net.forward(inputs[i]);
+            current_loss += loss_calc->compute_loss(current_result, expected_outputs[i]);
+            net.reverse(current_result, expected_outputs[i]);
+        }
+
+        if(e%200==0) {
+            cout << "Total loss for " << e << " epochs: " << current_loss << endl;
         }
     }
+
+
+    //test model on each of the inputs. Model output is determined to be the maximum value.
+    int n_correct = 0;
+    for(int i=0; i<N_OUTPUTS; i++) {
+        VectorXd test_input = decimal_to_binary(N_INPUTS, i);
+        VectorXd test_output = net.forward(test_input, false);
+
+        //find maximum index
+        double max = -99999;
+        int max_index = -1;
+        for(int v=0; v<test_output.size(); v++) {
+            if(test_output(v) > max) {
+                max = test_output(v);
+                max_index = v;
+            }
+        }
+        cout << "Max for " << i << ": " << max_index << endl;
+
+        //update number of correct predictions
+        if(max_index == i) {
+            n_correct++;
+        }
+    }
+    cout << "Number correct: " << n_correct << " out of " << N_OUTPUTS << endl;
+}
+
+
+
+/**
+ * Entry point of the program
+ */
+int main() {
+    test_training_binconvert();
 }
