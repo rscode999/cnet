@@ -1,11 +1,14 @@
 #include <cmath>
 #include <string>
 
+#include <Eigen/Dense>
+
 using namespace std;
 
+using namespace Eigen;
 
 /**
- * Holds an activation function, its derivative, and a unique identifier.
+ * Holds an activation function, along with all information required to do backpropagation with it.
  * 
  * Abstract class.
  */
@@ -15,25 +18,25 @@ public:
     /**
      * Returns the output of the given activation function
      * @param input value to calculate 
-     * @return `input` after applying this activation function
+     * @return `input` after applying this activation function element-wise
      */
-    virtual double compute(double input) = 0;
+    virtual VectorXd compute(const VectorXd& input) = 0;
 
     /**
      * Returns the derivative output of the given activation function
      * @param input value to calculate 
-     * @return the activation function's derivative applied to `input`
+     * @return the activation function's derivative applied element-wise to `input`
      */
-    virtual double compute_derivative(double input) = 0;
+    virtual VectorXd compute_derivative(const VectorXd& input) = 0;
 
     /**
      * @return unique identifying string for the activation function.
-     * If not overridden, returns `"no_identifier"`.
+     * If not overridden, returns `"none"`.
      * 
-     * Typically an abbreviation of the activation function's name in all lowercase.
+     * Typically the activation function's name in all lowercase.
      */
-    virtual string identifier()  {
-        return "no_identifier";
+    virtual string name()  {
+        return "none";
     };
 
     /**
@@ -80,25 +83,20 @@ public:
      * @param input input value
      * @return the input value as itself
      */
-    double compute(double input) override {
-        return input;
+    VectorXd compute(const VectorXd& input) override {
+        VectorXd output = input;
+        return output;
     }
 
     /**
-     * Returns the constant value 1, regardless of the input value.
+     * Returns a VectorXd whose indices are the constant value 1, regardless of the input value.
      * @param input input value
-     * @return 1.0
+     * @return VectorXd of 1.0
      */
-    double compute_derivative(double input) override {
-        return 1.0;
+    VectorXd compute_derivative(const VectorXd& input) override {
+        return VectorXd::Constant(input.size(), 1.0);
     }
 
-    /**
-     * @return the string `"none"` (this is a placeholder activation function)
-     */
-    string identifier() override {
-        return "none";
-    }
 };
 
 
@@ -106,8 +104,8 @@ public:
 /**
  * The Rectified Linear Unit (ReLU) activation function.
  *
- * The ReLU function returns the input if it is positive, otherwise returns 0.
- * Its derivative is 1 for positive input, 0 otherwise.
+ * The ReLU function returns 0 if the input is negative, otherwise returns the input as itself.
+ * Its derivative is 0 for negative input, 1 otherwise.
  */
 class Relu : public ActivationFunction {
 public:
@@ -119,30 +117,36 @@ public:
     }
 
     /**
-     * Returns `ReLU(input)`
-     * @param input The input value
-     * @return ReLU applied to the input
+     * Returns the Rectified Linear Unit function applied to each value in the input
+     * @param input The input values
+     * @return ReLU applied to the input element-wise
      */
-    double compute(double input) override {
-        return input > 0 ? input : 0.0;
+    VectorXd compute(const VectorXd& input) override {
+        return input.unaryExpr([](double x) {
+                return (x<0) ? 0 : x;
+            }
+        );
     }
 
     /**
-     * Computes the derivative of the ReLU function (the unit step function) for the input.
+     * Computes the derivative of the ReLU function (the unit step function) for each element of the input.
      * 
-     * `compute_derivative(0)` is defined to be 0.
+     * `compute_derivative(0)` is defined to be 1.
      * 
-     * @param input The input value
-     * @return 1 if `input` > 0, else 0.
+     * @param input The input values
+     * @return for each element, 1 if `input` >= 0, else 0.
      */
-    double compute_derivative(double input) override {
-        return input > 0 ? 1.0 : 0.0;
+    VectorXd compute_derivative(const VectorXd& input) override {
+        return input.unaryExpr([](double x) {
+                return (x<0) ? 0.0 : 1.0;
+            }
+        );
     }
 
     /**
      * @return `"relu"`, the function's unique identifier.
      */
-    string identifier() override {
+    string name() override {
         return "relu";
     }
 
@@ -158,52 +162,93 @@ public:
 
 
 /**
- * The sigmoid activation function.
- *
- * The sigmoid function returns a value between 0 and 1. It is defined as:
- * sigmoid(x) = 1 / (1 + exp(-x))
- * The derivative is: sigmoid(x) * (1 - sigmoid(x))
+ * Sigmoid activation function
  */
 class Sigmoid : public ActivationFunction {
 public:
-
     /**
      * Creates a new Sigmoid activation function object
      */
     Sigmoid() {
     }
 
-
     /**
-     * Returns the result of the sigmoid function on the input.
-     * @param input The input value.
-     * @return `sigmoid(input)` as a double
+     * Returns a VectorXd with the sigmoid function applied element-wise
+     * 
+     * @param input inputs to compute
+     * @return VectorXd with the sigmoid function applied
      */
-    double compute(double input) override {
-        return 1.0 / (1.0 + exp(-1 * input));
+    VectorXd compute(const VectorXd& input) override {
+        return input.unaryExpr([](double x) {
+            return 1.0 / (1.0 + exp(-x));
+        });
     }
 
     /**
-     * Returns the derivative of the sigmoid function applied to the input.
-     * @param input The input value.
-     * @return Sigmoid's derivative: sigmoid(x) * (1 - sigmoid(x)).
+     * Applies the element-wise sigmoid derivative: sigmoid(x) * (1 - sigmoid(x))
+     * @param input inputs to compute
+     * @return VectorXd with the sigmoid function's derivative applied
      */
-    double compute_derivative(double input) override {
-        double sigmoid = compute(input);
-        return sigmoid * (1.0 - sigmoid);
+    VectorXd compute_derivative(const VectorXd& input) override {
+        VectorXd sig = compute(input);
+        return sig.array() * (1.0 - sig.array());
     }
 
-    /**
-     * @return the string `"sigmoid"`
-     */
-    string identifier() override {
+    std::string name() override {
         return "sigmoid";
     }
 
     /**
-     * @return `true` (sigmoid is applied pre-activation during backpropagation)
+     * @return `true`.
+     * This implementation of the Sigmoid derivative should be taken before activation functions are applied.
      */
     bool using_pre_activation() override {
         return true;
     }
+};
+
+
+
+/**
+ * Calculates Softmax activation.
+ * 
+ * The only layer allowed to use Softmax is the output layer.
+ */
+class Softmax : public ActivationFunction {
+
+private:
+
+public:
+    /**
+     * Creates a new Softmax object
+     */
+    Softmax() {
+    }
+
+
+    /**
+     * Softmax over the entire vector
+     */
+    VectorXd compute(const VectorXd& input) override {
+        VectorXd shifted = input.array() - input.maxCoeff();  // for numerical stability
+        VectorXd exps = shifted.array().exp();
+        double sum = exps.sum();
+        return exps / sum;
+    }
+
+    /**
+     * Should not be used.
+     */
+    VectorXd compute_derivative(const VectorXd& input) override {
+        assert((false && "Should not compute softmax derivative element-wise"));
+        throw exception();
+    }
+
+    /**
+     * @return `"softmax"`, the identifier for a Softmax activation function
+     */
+    string name() override {
+        return "softmax";
+    }
+
 };

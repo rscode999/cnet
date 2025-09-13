@@ -10,20 +10,30 @@ using namespace Eigen;
 
 /**
  * Utility struct for storing pre-activation and post-activation results
- * at each step of the forward process
+ * at each step of the forward process.
+ * 
+ * Used in backpropagation.
  */
 struct LayerCache {
+    /**
+     * Outputs of a network's layer, before the layer's activation function is applied
+     */
     Eigen::VectorXd pre_activation;
+
+    /**
+     * Outputs of a network's layer, after the layer's activation function is applied
+     */
     Eigen::VectorXd post_activation;
 };
-//This should probably be put in network.cpp
 
 
 
 /**
- * Represents a layer in a network. 
+ * A linear layer in a network.
+ * Can be an input, hidden layer, or output, depending on its position in the network.
  * 
- * Can be an input, hidden layer, or output.
+ * Each layer has a weight matrix and separate bias vector.
+ * They can be manually viewed or updated using getter and setter methods.
  */
 class Layer {
 
@@ -111,14 +121,14 @@ public:
     //GETTERS
     
     /**
-     * @return smart pointer to the layer's activation function
+     * @return (deep copy of) smart pointer to the layer's activation function
      */
     const shared_ptr<ActivationFunction> activation_function() const {
         return activation_fcn;
     }
 
     /**
-     * @return the layer's bias vector, as an Eigen::VectorXd.
+     * @return the layer's bias vector, as an Eigen::VectorXd
      */
     VectorXd bias_vector() {
         //Need to explicitly reshape the column matrix into a vector
@@ -133,18 +143,19 @@ public:
     }
 
     /**
+     * @return the layer's name
+     */
+    string name() {
+        return layer_name;
+    }
+
+    /**
      * @return the number of elements in the layer's output
      */
     int output_dimension() {
         return weights.rows();
     }
 
-    /**
-     * @return the layer's name
-     */
-    string name() {
-        return layer_name;
-    }
 
     /**
      * @return the layer's weight matrix, as an Eigen::MatrixXd
@@ -158,6 +169,20 @@ public:
     //SETTERS
 
     /**
+     * Sets the layer's activation function to `new_activation_function`, a smart pointer to an activation function object.
+     * 
+     * Note: Setting the activation function to a `shared_ptr<IdentityActivation>` effectively removes the layer's activation function.
+     * 
+     * @param new_activation_function smart pointer to new activation function
+     */
+    void set_activation_function(shared_ptr<ActivationFunction> new_activation_function) {  
+        activation_fcn.reset(); //An activation function is guaranteed to exist, even after the layer is created
+        activation_fcn = new_activation_function;
+    }
+
+
+
+    /**
      * Sets the layer's bias vector to `new_biases`, a column vector.
      * 
      * This method also accepts variables of type Eigen::VectorXd.
@@ -169,6 +194,17 @@ public:
         assert((new_biases.rows() == output_dimension() && "New bias vector must be of the same dimension as the output"));
         biases = new_biases;
     }
+
+
+    /**
+     * Sets the layer's name to `new_name`.
+     * @param new_name new name for the layer
+     */
+    void set_name(string new_name) {
+        layer_name = new_name;
+    }
+
+
 
     /**
      * Sets the layer's weight matrix to `new_weights`.
@@ -186,21 +222,6 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////
     //METHODS
-
-    /**
-     * Applies the layer's activation function to each value of `input`
-     */
-    VectorXd apply_activation(const MatrixXd& input) {
-        assert((input.cols() == 1 && "The activation's input must be a column vector"));
-        assert((input.rows() == output_dimension() && "Activation's input vector must have dimension equal to the layer's output dimension"));
-
-        VectorXd output(input.rows());
-        for(int i=0; i<input.rows(); i++) {
-            output(i) = activation_fcn->compute(input(i));
-        }
-        return output;
-    }
-
 
     
     /**
@@ -236,6 +257,6 @@ public:
 
 std::ostream& operator<<(std::ostream& os, const Layer& layer) {
     os << "Layer \"" << layer.layer_name << "\" (" << layer.weights.cols() << ", " << layer.weights.rows() 
-        << "), activation function: " << layer.activation_fcn->identifier();
+        << "), activation function: " << layer.activation_fcn->name();
     return os;
 }

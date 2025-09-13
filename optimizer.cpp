@@ -7,6 +7,9 @@
 
 /**
  * Interface (fully abstract class) for network optimizers. Cannot be directly used.
+ * 
+ * An Optimizer's only abstract method, `step`, is called internally by a Network.
+ * Outside users never directly call the `step` method.
  */
 class Optimizer {
 public:
@@ -14,7 +17,7 @@ public:
     /**
      * @return the optimizer's identifying string. If not overridden, returns `"optimizer"`.
      */
-    virtual string identifier() {
+    virtual string name() {
         return "optimizer";
     }
 
@@ -41,6 +44,7 @@ public:
 
 
 
+
 /**
  * A Stochastic Gradient Descent (SGD) optimizer
  */
@@ -48,7 +52,7 @@ class SGD : public Optimizer {
 
 private:
     /**
-     * Struct to store weight and bias velocities for momentum SGD
+     * Private struct to store weight and bias velocities for momentum SGD
      */
     struct MomentumCache {
         MatrixXd weight_velocity;
@@ -71,19 +75,38 @@ private:
     double momentum_coeff;
 
     /**
-     * Holds matrices and vectors 
+     * Holds previous matrices and vectors used in backpropagation. For momentum.
      */
     vector<MomentumCache> momentum_cache;
 
+
+    /**
+     * Returns the product of a softmax output's Jacobian matrix 
+     * with a gradient vector.
+     * 
+     * Does not explicitly calculate the softmax Jacobian.
+     * 
+     * Used when a layer uses softmax activation, but cross-entropy loss is not used.
+     * 
+     * @param softmax_out the softmax layer's output
+     * @param loss_grad the gradient of the loss with respect to the softmax output
+     * @return Jacobian from `softmax_output` * `loss_grad`
+     */
+    VectorXd softmax_jacobian_vector_product(const VectorXd& softmax_out, const VectorXd& loss_grad) {
+        double dot = softmax_out.dot(loss_grad);
+        return softmax_out.array() * (loss_grad.array() - dot);
+    }
+
+    
 public:
 
     /**
-     * Creates a new SGD optimizer
+     * Creates a new SGD optimizer, loading it with the given hyperparameters `learning_rate` and `momentum_coefficient`.
      * 
      * @param learning_rate learning rate, for determining speed of convergence.  Default 0.01. Must be positive
-     * @param momentum_coefficient for determining amount of momentum to use. Default 0.9. Cannot be negative
+     * @param momentum_coefficient for determining amount of momentum to use. Default 0. Cannot be negative
      */
-    SGD(double learning_rate = 0.01, double momentum_coefficient = 0.9) {
+    SGD(double learning_rate = 0.01, double momentum_coefficient = 0) {
         assert((learning_rate>0 && "Learning rate must be positive"));
         assert((momentum_coefficient>=0 && "Momentum coefficient cannot be negative"));
         learn_rate = learning_rate;
@@ -94,7 +117,7 @@ public:
     /**
      * @return `"sgd"`, the optimizer's identifying string
      */
-    string identifier() override {
+    string name() override {
         return "sgd";
     }
 
@@ -124,38 +147,39 @@ public:
             }
         }
 
-        VectorXd delta = loss_calculator->compute_loss_gradient(predictions, actuals);
-        //or otherwise use the loss function's derivative
-        
-        //Get final layer's activation function
-        shared_ptr<ActivationFunction> final_activation_function = layers.back().activation_function();
 
+        VectorXd delta;
+        auto final_activation = layers.back().activation_function();
+        bool final_activation_using_softmax = final_activation->name() == "softmax";
+        bool using_cross_entropy_loss = loss_calculator->name() == "cross_entropy";
 
-        //Component-wise multiply to the element-wise differentiated final bias vector
-        
-        //Pre-activation 
-        if(final_activation_function->using_pre_activation()) {
-            delta = delta.cwiseProduct(
-                intermediate_outputs.back().pre_activation.unaryExpr(
-                    //Call the final layer's activation function's derivative on each element
-                    [&final_activation_function](double x) {
-                        return final_activation_function->compute_derivative(x);
-                    }
-                )
-            );
-        }
-        //Post-activation
+        // Step 1: Compute dL/dy
+        VectorXd loss_grad = loss_calculator->compute_loss_gradient(predictions, actuals);
+
+        // Step 2: Handle softmax Jacobian if needed
+        bool activation_derivative_applied = false; //Ensures that, if softmax Jacobian is applied, it isn't applied again
+        if (final_activation_using_softmax && !using_cross_entropy_loss) {
+            // This is softmax + non-cross-entropy (e.g., MSE)
+            delta = softmax_jacobian_vector_product(predictions, loss_grad);
+            activation_derivative_applied = true;
+        } 
         else {
-            delta = delta.cwiseProduct(
-                intermediate_outputs.back().post_activation.unaryExpr(
-                    //Call the final layer's activation function's derivative on each element
-                    [final_activation_function](double x) {
-                        return final_activation_function->compute_derivative(x);
-                    }
-                )
-            );
+            // For cross-entropy + softmax or any other case
+            delta = loss_grad;
         }
-        
+
+        // Step 3: Apply activation derivative if applicable
+        if (!(final_activation_using_softmax && using_cross_entropy_loss)
+            && !activation_derivative_applied) { //Only do this step if the softmax Jacobian is not already applied
+                
+            if (final_activation->using_pre_activation()) {
+                delta = delta.cwiseProduct(final_activation->compute_derivative(intermediate_outputs.back().pre_activation));
+            } 
+            else {
+                delta = delta.cwiseProduct(final_activation->compute_derivative(intermediate_outputs.back().post_activation));
+            }
+        }
+                
    
         //update remaining layers
         for(int l = layers.size()-1; l >= 0; l--) {
@@ -174,11 +198,7 @@ public:
                     : intermediate_outputs[l-1].post_activation;
                 
                 //apply previous layer's activation function derivative to each intermediate output element
-                current_intermediate_output = current_intermediate_output.unaryExpr(
-                    [activation = layers[l-1].activation_function()](double x) {
-                        return activation->compute_derivative(x);
-                    }
-                );
+                current_intermediate_output = layers[l-1].activation_function()->compute_derivative(current_intermediate_output);
 
                 /*
                 do backpropagation

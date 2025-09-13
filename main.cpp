@@ -41,12 +41,12 @@ void test_xor_2layer() {
     shared_ptr<SGD> sgd = make_shared<SGD>();
     shared_ptr<MeanSquaredError> mse = make_shared<MeanSquaredError>();
     Network net;
-    net.add_loss_calculator(mse);
-    net.add_optimizer(sgd);
+    net.set_loss_calculator(mse);
+    net.set_optimizer(sgd);
     net.add_layer(l0);
     net.add_layer(l1);
     
-    net.enable_training();
+    net.enable();
     
     VectorXd in(2);
     in << 0,0;
@@ -67,6 +67,7 @@ void test_xor_2layer() {
 
     sgd.reset();
 }
+
 
 
 /**
@@ -93,27 +94,27 @@ void test_xor_1layer() {
     shared_ptr<SGD> optimizer = make_shared<SGD>();
     shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>();
     net.add_layer(layer);
-    net.add_loss_calculator(loss_calc);
-    net.add_optimizer(optimizer);
+    net.set_loss_calculator(loss_calc);
+    net.set_optimizer(optimizer);
 
-    net.enable_training();
+    net.enable();
 
     VectorXd in(2);
 
     in << 0,0;
-    cout << "Results for 0,0:  " << net.forward(in) << endl;
+    cout << "Results for 0,0:  " << net.forward(in, false) << endl;
     cout << "Expected for 0,0: 0.4523\n" << endl;
 
     in << 0,1;
-    cout << "Results for 0,1:  " << net.forward(in) << endl;
+    cout << "Results for 0,1:  " << net.forward(in, false) << endl;
     cout << "Expected for 0,1: 0.5215\n" << endl;
 
     in << 1,0;
-    cout << "Results for 1,0:  " << net.forward(in) << endl;
+    cout << "Results for 1,0:  " << net.forward(in, false) << endl;
     cout << "Expected for 1,0: 0.5175\n" << endl;
 
     in << 1,1;
-    cout << "Results for 1,1:  " << net.forward(in) << endl;
+    cout << "Results for 1,1:  " << net.forward(in, false) << endl;
     cout << "Expected for 1,1: 0.5861" << endl;
 
     optimizer.reset();
@@ -137,12 +138,11 @@ void test_training_xor() {
     shared_ptr<SGD> optimizer = make_shared<SGD>(0.02, 0.9); //Learning rate 0.02, momentum 0.9
     shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>();
     
-    net.add_loss_calculator(loss_calc);
-    net.add_optimizer(optimizer);
+    net.set_loss_calculator(loss_calc);
+    net.set_optimizer(optimizer);
     optimizer.reset();
-    loss_calc.reset();
 
-    net.enable_training();
+    net.enable();
 
     //Add XOR inputs
     vector<VectorXd> inputs;
@@ -164,12 +164,19 @@ void test_training_xor() {
         correct_outputs.push_back(out);
     }
 
-    //Train for 2000 epochs
-    const int N_EPOCHS = 2000;
+    //Train for 1000 epochs
+    const int N_EPOCHS = 1000;
     for(int e=1; e<=N_EPOCHS; e++) {
+        double current_loss = 0;
+
         for(int i=0; i<inputs.size(); i++) {
             VectorXd output = net.forward(inputs[i]);
+            current_loss += loss_calc->compute_loss(output, correct_outputs[i]);
             net.reverse(output, correct_outputs[i]);
+        }
+
+        if(e % 200 == 0) {
+            cout << "Loss for " << e << " epochs: " << current_loss << endl;
         }
     }
 
@@ -239,9 +246,10 @@ VectorXd one_hot_vectorxd(int n_indices, int input) {
     return output;
 }
 
-
 /**
  * Creates and trains a model to convert an input, in binary, to a one-hot output.
+ * 
+ * Uses ReLU and softmax activations, along with cross-entropy loss.
  */
 void test_training_binconvert() {
     const int N_INPUTS = 5; //Arbitary positive constant
@@ -250,22 +258,23 @@ void test_training_binconvert() {
 
     Network net = Network();
 
-    shared_ptr<SGD> optimizer = make_shared<SGD>(0.02, 0.9); //learning rate=0.02, momentum=0.9
-    net.add_optimizer(optimizer);
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9);
+    net.set_optimizer(optimizer);
     optimizer.reset();
 
-    shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>();
-    net.add_loss_calculator(loss_calc);
+    shared_ptr<CrossEntropy> loss_calc = make_shared<CrossEntropy>();
+    // shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>(); //Should also run, but with ~50% accuracy
+    net.set_loss_calculator(loss_calc);
     //Keep the loss calculator outside the network for per-epoch loss calculations
 
     //add layers
-    shared_ptr<Sigmoid> sigmoid_activ = make_shared<Sigmoid>();
-    net.add_layer(N_INPUTS, 10, sigmoid_activ, "layer0");
-    net.add_layer(10, 20, sigmoid_activ, "layer1");
-    net.add_layer(20, 40, sigmoid_activ, "layer2");
-    net.add_layer(40, N_OUTPUTS, "layer3");
-    sigmoid_activ.reset();
-
+    shared_ptr<Relu> relu_activ = make_shared<Relu>();
+    shared_ptr<Softmax> softmax_activ = make_shared<Softmax>();
+    net.add_layer(N_INPUTS, 20, relu_activ, "layer0");
+    net.add_layer(20, 40, softmax_activ, "layer1");
+    net.add_layer(40, N_OUTPUTS, softmax_activ, "layer2");
+    relu_activ.reset();
+    softmax_activ.reset();
 
     //get inputs and corresponding expected outputs
     vector<VectorXd> inputs;
@@ -279,7 +288,7 @@ void test_training_binconvert() {
     }
 
     //enable training
-    net.enable_training();
+    net.enable();
 
     cout << "Training started for " << N_INPUTS << " inputs, " << N_EPOCHS << " epochs" << endl;
 
@@ -326,8 +335,86 @@ void test_training_binconvert() {
 
 
 /**
- * Entry point of the program
+ * Adds and removes layers from a network
  */
+void test_add_remove() {
+    const int N_INPUTS = 32;
+    const int N_OUTPUTS = 5;
+
+    Network net = Network();
+    cout << net << "\n" << endl;
+    net.set_loss_calculator(make_shared<CrossEntropy>());
+    net.set_optimizer(make_shared<SGD>());
+
+    shared_ptr<Relu> relu = make_shared<Relu>();
+    shared_ptr<Softmax> softmax = make_shared<Softmax>();
+
+    net.add_layer(N_INPUTS, 64, relu, "input");
+    net.add_layer(64, 32, relu, "hidden0");
+    net.add_layer(32, 16, relu, "hidden1");
+    net.add_layer(16, N_OUTPUTS, softmax, "output");
+    cout << net << endl;
+
+    //Add a layer
+    net.add_layer(N_OUTPUTS, 1, "new_layer");
+    cout << "After layer addition:\n";
+    cout << net << endl;
+
+    //Remove a layer
+    net.remove_layer(0);
+    net.remove_layer("hidden1");
+    cout << "After layer removals:\n";
+    cout << net << endl;
+
+    //Insert new layers
+    net.insert_layer_at(1, Layer(32, 15, "inserted_layer_0"));
+    cout << "After layer insertion:\n";
+    cout << net << endl;
+    cout << "Inputs: " << net.input_dimension() << ", outputs: " << net.output_dimension() << "\n" << endl;
+
+    //Attempt to enable the net with input/output incompatibility
+    try {
+        net.enable();
+    }
+    catch(illegal_state& e) {
+        cout << "Enabling failed- ";
+        cout << e.what() << "\n" << endl;
+    }
+
+    //Change layer
+    net.remove_layer("inserted_layer_0");
+    net.insert_layer_at(1, Layer(32, 16, "new_inserted_layer_0"));
+    cout << "After layer correction:\n" << net << "\n" << endl;
+    
+    //Attempt to enable the net with softmax not in an output layer
+    try {
+        net.enable();
+    }
+    catch(illegal_state& e) {
+        cout << "Enabling failed- ";
+        cout << e.what() << "\n" << endl;
+    }
+
+    //Replace the softmax layer
+    net.remove_layer_at(2);
+    net.insert_layer_at(2, Layer(16, 5, relu, "softmax_layer_replacement"));
+    cout << "After illegal softmax correction:\n" << net << "\n" << endl;
+
+    net.enable();
+    cout << net << endl;
+
+    //Attempt to remove a layer while activated
+    try {
+        net.set_biases_at(0, VectorXd(net.layer_at(0).output_dimension()));
+    }
+    catch(illegal_state& e) {
+        cout << "Layer bias vector change failed- ";
+        cout << e.what() << "\n" << endl;
+    }
+}
+
+
+
 int main() {
     test_training_binconvert();
 }
