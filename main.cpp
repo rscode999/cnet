@@ -1,4 +1,4 @@
-#include "network.cpp"
+#include "cnet/network.cpp"
 
 #include <iostream>
 
@@ -271,7 +271,7 @@ void test_training_binconvert() {
     shared_ptr<Relu> relu_activ = make_shared<Relu>();
     shared_ptr<Softmax> softmax_activ = make_shared<Softmax>();
     net.add_layer(N_INPUTS, 20, relu_activ, "layer0");
-    net.add_layer(20, 40, softmax_activ, "layer1");
+    net.add_layer(20, 40, relu_activ, "layer1"); //test: change to softmax and ensure the "enable" check fails
     net.add_layer(40, N_OUTPUTS, softmax_activ, "layer2");
     relu_activ.reset();
     softmax_activ.reset();
@@ -416,5 +416,6 @@ void test_add_remove() {
 
 
 int main() {
-    test_training_binconvert();
+    Network net = Network();
+    net.set_loss_calculator(shared_ptr<CrossEntropy>());
 }
