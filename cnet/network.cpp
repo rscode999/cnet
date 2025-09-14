@@ -281,11 +281,8 @@ void add_layer(int input_dimension, int output_dimension, shared_ptr<ActivationF
 
 /**
  * Disables the network, allowing the network to be edited.
- * 
- * Also removes unnecessary memory usage accumulated during training.
  */
 void disable() {
-    intermediate_outputs.clear();
     enabled = false;
 }
 
@@ -301,6 +298,8 @@ void disable() {
  * The only layer that can have Softmax activation is the final (output) layer.
  * 
  * If the check fails, the method throws `illegal_state`.
+ * 
+ * If the check passes, to prepare for network architecture changes, all training state information is reset.
  * 
  * @throws `illegal_state` (with descriptive error message) if the network state check fails
  */
@@ -335,9 +334,10 @@ void enable() {
         }
     }
 
-    //Check passed: Initialize input vector and intermediate outputs
-    initial_input = VectorXd(input_dimension());
+    //Check passed: Initialize input vector and reset intermediate outputs
+    initial_input = VectorXd(layers[0].input_dimension());
     intermediate_outputs.clear();
+    optimizer->clear_state();
     enabled = true;
 }
 
@@ -457,13 +457,11 @@ void set_activation_function_at(int layer_number, shared_ptr<ActivationFunction>
  * 
  * The input layer's number is 0. The first hidden layer's number is 1.
  * 
- * This method also accepts `new_biases` of type Eigen::VectorXd.
- * 
  * @param layer_number which layer's biases to set (0-based indexing). Must be between 0 and {networkName}.layer_count()-1, inclusive on both ends
- * @param new_biases new bias vector to set. Must have {selected layer}.output_dimension() rows and 1 column
+ * @param new_biases new bias vector to set. Must have {selected layer}.output_dimension() rows
  * @throws `illegal_state` if the network is enabled
  */
-void set_biases_at(int layer_number, MatrixXd new_biases) {
+void set_biases_at(int layer_number, VectorXd new_biases) {
     assert((layer_number>=0 && layer_number<layers.size() && "For changing bias vectors, layer number must be between 0 and (number of layers)-1"));
     assert((new_biases.rows() == layers[layer_number].output_dimension() && "New bias vector's number of rows must equal the selected layer's output dimension"));
     assert((new_biases.cols() == 1 && "New biases must be a column vector"));
@@ -562,12 +560,12 @@ void set_weights_at(int layer_number, MatrixXd new_weights) {
  * 
  * Requires that the network is enabled. If not, the method throws `illegal_state`.
  * 
- * @param input input to the network (Eigen::VectorXd is accepted). Must have `{networkName}.input_dimension()` rows and 1 column
+ * @param input input to the network (Eigen::VectorXd is accepted). Must have `{networkName}.input_dimension()` rows
  * @param training true if  training the network, false if getting results for evaluation only. Default: `true`
  * @return the network's output, as a VectorXd of dimension `{networkName}.output_dimension()`
  * @throws `illegal_state` if the network is not enabled
  */
-VectorXd forward(const MatrixXd& input, bool training = true) {
+VectorXd forward(const VectorXd& input, bool training = true) {
     assert((input.cols() == 1 && "Input to forward operation must be a column vector"));
     assert((input.rows() == input_dimension() && "Input to forward operation must have same dimension as the network's input"));
     
@@ -607,11 +605,11 @@ VectorXd forward(const MatrixXd& input, bool training = true) {
  * 
  * Requires that the network is enabled.
  * 
- * @param input input to the network (Eigen::VectorXd is accepted). Must have `{networkName}.input_dimension()` rows and 1 column
+ * @param input input to the network (Eigen::VectorXd is accepted). Must have `{networkName}.input_dimension()` rows
  * @return the network's output, as a VectorXd of dimension `{networkName}.output_dimension()`
  * @throws `illegal_state` if the network is not enabled
  */
-VectorXd predict(const MatrixXd& input) {
+VectorXd predict(const VectorXd& input) {
     assert((input.cols() == 1 && "Input to prediction must be a column vector"));
     assert((input.rows() == input_dimension() && "Input to prediction must have same dimension as the network's input"));
 
@@ -635,7 +633,7 @@ VectorXd predict(const MatrixXd& input) {
  * @param actuals expected output for the network's prediction
  * @throws `illegal_state` if the network is not enabled
  */
-void reverse(const MatrixXd& predictions, const MatrixXd& actuals) {
+void reverse(const VectorXd& predictions, const VectorXd& actuals) {
     assert((predictions.cols() == 1 && "Reverse process predictions must be a column vector"));
     assert((actuals.cols() == 1 && "Reverse process actuals must be a column vector"));
     assert((predictions.rows() == output_dimension() && "Reverse process predictions length must equal network's output dimension"));

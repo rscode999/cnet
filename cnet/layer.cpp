@@ -47,7 +47,7 @@ private:
     /**
      * Holds the biases. Must be a column vector (i.e. has 1 column).
      */
-    MatrixXd biases;
+    VectorXd biases;
 
 
     /**
@@ -92,6 +92,8 @@ public:
     /**
      * Creates a new Layer and loads it with the provided fields.
      * 
+     * The weights and biases are initialized to random numbers on the interval [-1, 1].
+     * 
      * @param input_dimension number of inputs that the Layer takes in. Must be positive.
      * @param output_dimension number of outputs that the Layer gives. Must be positive.
      * @param activation_function smart pointer to activation function object to use
@@ -105,8 +107,8 @@ public:
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
-        weights = MatrixXd::Random(output_dimension, input_dimension) * 0.5;
-        biases  = MatrixXd::Random(output_dimension, 1) * 0.5;
+        weights = MatrixXd::Random(output_dimension, input_dimension);
+        biases  = VectorXd::Random(output_dimension);
         
         //initialize activation function
         activation_fcn = activation_function;
@@ -131,8 +133,7 @@ public:
      * @return the layer's bias vector, as an Eigen::VectorXd
      */
     VectorXd bias_vector() {
-        //Need to explicitly reshape the column matrix into a vector
-        return biases.reshaped();
+        return biases;
     }
     
     /**
@@ -183,14 +184,11 @@ public:
 
 
     /**
-     * Sets the layer's bias vector to `new_biases`, a column vector.
+     * Sets the layer's bias vector to `new_biases`.
      * 
-     * This method also accepts variables of type Eigen::VectorXd.
-     * 
-     * @param new_biases new vector of biases for the layer to use. Must have `{layerName}.output_dimension()` rows and 1 column
+     * @param new_biases new vector of biases for the layer to use. Must have `{layerName}.output_dimension()` rows
      */
-    void set_bias_vector(MatrixXd new_biases) {
-        assert((new_biases.cols() == 1 && "New biases must be a column vector"));
+    void set_bias_vector(VectorXd new_biases) {
         assert((new_biases.rows() == output_dimension() && "New bias vector must be of the same dimension as the output"));
         biases = new_biases;
     }
@@ -232,16 +230,14 @@ public:
      * 
      * Transforms a `{layerName}.input_dimension()` column vector into a `{layerName}.output_dimension()` vector.
      * 
-     * Also works on variables of type Eigen::VectorXd.
-     * 
-     * @param input vector to apply the forward operation to. Must have `{layerName}.input_dimension()` rows and 1 column
+     * @param input vector to apply the forward operation to. Must have `{layerName}.input_dimension()` elements
      * @return vector, of length `{layerName}.output_dimension()`, after `input`'s forward process
      */
-    VectorXd forward(const MatrixXd& input) {
+    VectorXd forward(const VectorXd& input) {
         assert((input.cols() == 1 && "The forward process's input must be a column vector"));
         assert((input.rows() == input_dimension() && "Forward process's input vector must have dimension equal to the weight matrix's number of columns"));
 
-        return (weights * input) + biases;
+        return ((weights * input) + biases).eval();
     }
 
 

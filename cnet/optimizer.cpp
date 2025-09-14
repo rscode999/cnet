@@ -15,6 +15,13 @@ class Optimizer {
 public:
 
     /**
+     * Resets the optimizer's internal state, allowing it to handle network architecture changes.
+     * 
+     * Called internally by a Network when the Network is disabled.
+     */
+    virtual void clear_state() = 0;
+
+    /**
      * @return the optimizer's identifying string. If not overridden, returns `"optimizer"`.
      */
     virtual string name() {
@@ -34,7 +41,7 @@ public:
      * @param loss_calculator smart pointer to loss calculator object
      */
     virtual void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
-        const MatrixXd& predictions, const MatrixXd& actuals, const shared_ptr<LossCalculator> loss_calculator) = 0;
+        const VectorXd& predictions, const VectorXd& actuals, const shared_ptr<LossCalculator> loss_calculator) = 0;
     
     /**
      * Properly destroys an Optimizer.
@@ -115,6 +122,14 @@ public:
 
 
     /**
+     * Removes the SGD optimizer's weight and bias velocities, preparing it to handle a different network architecture.
+     */
+    void clear_state() override {
+        momentum_cache.clear();
+    }
+
+
+    /**
      * @return `"sgd"`, the optimizer's identifying string
      */
     string name() override {
@@ -133,13 +148,13 @@ public:
      * @param loss_calculator smart pointer to loss calculator object
      */
     void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
-        const MatrixXd& predictions, const MatrixXd& actuals, const shared_ptr<LossCalculator> loss_calculator) override {
+        const VectorXd& predictions, const VectorXd& actuals, const shared_ptr<LossCalculator> loss_calculator) override {
         
         assert((predictions.cols() == 1 && "Predicted values must be a column vector"));
         assert((predictions.rows() == layers.back().output_dimension() && "Predicted value vector must have dimension equal to the network's output dimension"));
         assert((actuals.cols() == 1 && "Actual values must be a column vector"));
         assert((actuals.rows() == layers.back().output_dimension() && "Actual value vector must have dimension equal to the network's output dimension"));
-        
+
         //Initialize momentums to all 0's (if not already initialized)
         if(momentum_cache.size() == 0) {
             for(Layer& layer : layers) {

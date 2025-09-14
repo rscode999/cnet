@@ -90,13 +90,13 @@ The created network is not enabled. It has no layers, loss calculator, or optimi
 
 #### biases\_at
 
-*Signature*: `VectorXd biases_at(int layer_number)`
+*Signature*: `Eigen::VectorXd biases_at(int layer_number)`
 
 Returns a deep copy of the bias vector in layer `layer_number`.
 
 **Returns**
 
-* `VectorXd`: Biases of layer `layer_number`.
+* `Eigen::VectorXd`: Biases of layer `layer_number`.
 
 **Parameters**
 
@@ -206,13 +206,13 @@ Returns the number of outputs of this network.
 
 #### weights\_at
 
-*Signature*: `MatrixXd weights_at(int layer_number)`
+*Signature*: `Eigen::MatrixXd weights_at(int layer_number)`
 
 Returns a deep copy of the weight matrix in layer `layer_number`.
 
 **Returns**
 
-* `MatrixXd`: Weight matrix at the specified layer.
+* `Eigen::MatrixXd`: Weight matrix at the specified layer.
 
 **Parameters**
 
@@ -285,7 +285,7 @@ To use this method, the network must be disabled.
 
 *Signature*: `void disable()`
 
-Disables the network, allowing the network to be modified. The network's stored intermediate outputs from training are cleared.
+Disables the network, allowing the network to be modified.
 
 ---
 
@@ -303,6 +303,9 @@ To successfully enable the network, the following conditions must be met:
 * A loss calculator and an optimizer are defined.
 * The output dimension of each layer must equal the input dimension of the next layer.
 * The only layer with Softmax activation is the final (output) layer.
+
+If all conditions are met, to handle changes in network architecture, 
+the network resets all internal state previously used in training.
 
 **Exceptions**
 
@@ -407,7 +410,7 @@ To use this method, the network must be disabled.
 
 #### set\_biases\_at
 
-*Signature*: `void set_biases_at(int layer_number, MatrixXd new_biases)`
+*Signature*: `void set_biases_at(int layer_number, Eigen::VectorXd new_biases)`
 
 Sets the biases of the specified layer.
 
@@ -416,7 +419,7 @@ To use this method, the network must be disabled.
 **Parameters**
 
 * `layer_number` (`int`): Index of the layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
-* `new_biases` (`MatrixXd`): New bias vector (column vector). Must have `output_dimension()` rows and 1 column.
+* `new_biases` (`Eigen::VectorXd`): New bias vector (column vector). Must contain `{networkName}.output_dimension()` elements
 
 **Exceptions**
 
@@ -463,7 +466,7 @@ To use this method, the network must be disabled.
 
 #### set\_weights\_at
 
-*Signature*: `void set_weights_at(int layer_number, MatrixXd new_weights)`
+*Signature*: `void set_weights_at(int layer_number, Eigen::MatrixXd new_weights)`
 
 Sets the weight matrix of the specified layer.
 
@@ -472,7 +475,7 @@ To use this method, the network must be disabled.
 **Parameters**
 
 * `layer_number` (`int`): Layer index. Must be on the interval [0, `{networkName}.layer_count()`-1].
-* `new_weights` (`MatrixXd`): New weight matrix. Must have `{selectedLayer}.output_dimension()` rows and `{selectedLayer}.input_dimension()` columns.
+* `new_weights` (`Eigen::MatrixXd`): New weight matrix. Must have `{selectedLayer}.output_dimension()` rows and `{selectedLayer}.input_dimension()` columns.
 
 **Exceptions**
 
@@ -484,7 +487,7 @@ To use this method, the network must be disabled.
 
 #### forward
 
-*Signature*: `VectorXd forward(const MatrixXd& input, bool training = true)`
+*Signature*: `Eigen::VectorXd forward(const Eigen::VectorXd& input, bool training = true)`
 
 Returns the output of the network for a given input.
 
@@ -492,18 +495,18 @@ If `training` is true, intermediate outputs are stored for backpropagation.
 
 **Returns**
 
-* `VectorXd`: Network's output.
+* `Eigen::VectorXd`: Network's output.
 
 **Parameters**
 
-* `input` (`MatrixXd`): Input vector.
+* `input` (`const Eigen::VectorXd&`): Input vector.
 * `training` (`bool`): Whether the network is in training mode. Default: `true`.
 
 ---
 
 #### predict
 
-*Signature*: `VectorXd predict(const MatrixXd& input)`
+*Signature*: `Eigen::VectorXd predict(const Eigen::VectorXd& input)`
 
 Returns the predictions for the given input.
 
@@ -515,17 +518,17 @@ Requires that the network is enabled.
 
 **Returns**
 
-* `VectorXd`: Network's output.
+* `Eigen::VectorXd`: Network's output.
 
 **Parameters**
 
-* `input` (`MatrixXd`): Input vector to make predictions with.
+* `input` (`const Eigen::VectorXd&`): Input vector to make predictions with.
 
 ---
 
 #### reverse
 
-*Signature*: `void reverse(const MatrixXd& predictions, const MatrixXd& actuals)`
+*Signature*: `void reverse(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals)`
 
 Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
 
@@ -534,8 +537,8 @@ If these conditions are not met, the method throws `illegal_state`.
 
 **Parameters**
 
-* `predictions` (`MatrixXd`): Predicted outputs from the network. Must have `{networkName}.output_dimension()` rows and 1 column.
-* `actuals` (`MatrixXd`): Expected outputs that the network should have produced. Must have `{networkName}.output_dimension()` rows and 1 column.
+* `predictions` (`const Eigen::VectorXd&`): Predicted outputs from the network. Must have `{networkName}.output_dimension()` elements.
+* `actuals` (`const Eigen::VectorXd&`): Expected outputs that the network should have produced. Must have `{networkName}.output_dimension()` elements.
 
 **Exceptions**
 
@@ -580,7 +583,7 @@ The exported network, as a std::string, contains its enabled/disabled status, lo
 **Parameters**
 
 * `os` (`std::ostream&`): Output stream to export to.
-* `network` (`Network`): Network to export.
+* `network` (`const Network&`): Network to export.
 
 
 ---
@@ -611,33 +614,33 @@ All pre-implemented subclasses of `ActivationFunction` have a constructor that t
 
 #### compute
 
-*Signature:* `virtual VectorXd compute(const VectorXd& input)`
+*Signature:* `virtual Eigen::VectorXd compute(const Eigen::VectorXd& input)`
 
 Applies the activation function element-wise to the input.
 
 **Returns**
 
-* `VectorXd`: `input` after applying this activation function element-wise.
+* `Eigen::VectorXd`: `input` after applying this activation function element-wise.
 
 **Parameters**
 
-* `input` (`VectorXd`): Value to calculate.
+* `input` (`const Eigen::VectorXd&`): Value to calculate.
 
 ---
 
 #### compute\_derivative
 
-*Signature:* `virtual VectorXd compute_derivative(const VectorXd& input)`
+*Signature:* `virtual Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input)`
 
 Applies the derivative of the activation function element-wise to the input.
 
 **Returns**
 
-* `VectorXd`: Activation function's derivative applied element-wise to `input`.
+* `Eigen::VectorXd`: Activation function's derivative applied element-wise to `input`.
 
 **Parameters**
 
-* `input` (`VectorXd`): Value to calculate.
+* `input` (`const Eigen::VectorXd&`): Value to calculate.
 
 ---
 
@@ -687,9 +690,9 @@ They can be manually viewed or updated using getter and setter methods.
 
 *Signature:* `Layer(int input_dimension, int output_dimension, std::string name = "layer")`
 
-Creates a new Layer and initializes all fields. The activation function is set to the identity function, `f(x) = x`.
+Creates a new Layer and initializes all fields. The activation function is set to the identity activation function, f(x)=x, which does nothing.
 
-All values are randomly initialized in the range `[-1, 1]`.
+All weights and biases are randomly initialized in the range `[-1, 1]`.
 
 **Parameters**
 
@@ -703,7 +706,7 @@ All values are randomly initialized in the range `[-1, 1]`.
 
 *Signature:* `Layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer")`
 
-Creates a new Layer and loads it with the provided fields. Values are randomly initialized in the range `[-1, 1]`.
+Creates a new Layer and loads it with the provided fields. Weights and biases are randomly initialized in the range `[-1, 1]`.
 
 **Parameters**
 
@@ -730,13 +733,13 @@ Returns a smart pointer to the layer's activation function.
 
 #### bias\_vector
 
-*Signature:* `VectorXd bias_vector()`
+*Signature:* `Eigen::VectorXd bias_vector()`
 
-Returns the layer's bias vector, as a `VectorXd`.
+Returns the layer's bias vector, as a `Eigen::VectorXd`.
 
 **Returns**
 
-* `VectorXd`: Bias vector.
+* `Eigen::VectorXd`: Bias vector, containing `{layerName}.output_dimension()` elements.
 
 ---
 
@@ -778,13 +781,13 @@ Returns the number of outputs for the layer.
 
 #### weight\_matrix
 
-*Signature:* `MatrixXd weight_matrix()`
+*Signature:* `Eigen::MatrixXd weight_matrix()`
 
 Returns the layer's weight matrix.
 
 **Returns**
 
-* `MatrixXd`: Weight matrix.
+* `Eigen::MatrixXd`: Weight matrix, with `{layerName}.output_dimension()` rows and `{layerName}.input_dimension()` columns.
 
 ---
 
@@ -804,13 +807,13 @@ Sets the layer's activation function to `new_activation_function`.
 
 #### set\_bias\_vector
 
-*Signature:* `void set_bias_vector(MatrixXd new_biases)`
+*Signature:* `void set_bias_vector(Eigen::VectorXd new_biases)`
 
 Sets the layer’s bias vector.
 
 **Parameters**
 
-* `new_biases` (`MatrixXd`): New vector of biases. Must have `output_dimension()` rows and 1 column.
+* `new_biases` (`Eigen::VectorXd`): New vector of biases. Must have `{layerName}.output_dimension()` elements.
 
 ---
 
@@ -828,13 +831,13 @@ Sets the name of the layer.
 
 #### set\_weight\_matrix
 
-*Signature:* `void set_weight_matrix(MatrixXd new_weights)`
+*Signature:* `void set_weight_matrix(Eigen::MatrixXd new_weights)`
 
 Sets the layer’s weight matrix.
 
 **Parameters**
 
-* `new_weights` (`MatrixXd`): New matrix of weights. Must have `output_dimension()` rows and `input_dimension()` columns.
+* `new_weights` (`Eigen::MatrixXd`): New matrix of weights. Must have `{layerName}.output_dimension()` rows and `{layerName}.input_dimension()` columns.
 
 ---
 
@@ -842,7 +845,7 @@ Sets the layer’s weight matrix.
 
 #### forward
 
-*Signature:* `VectorXd forward(const MatrixXd& input)`
+*Signature:* `Eigen::VectorXd forward(const Eigen::VectorXd& input)`
 
 Performs the linear forward operation for the given input.
 
@@ -851,11 +854,11 @@ Applies weights and adds biases.
 
 **Returns**
 
-* `VectorXd`: Resulting vector of length `output_dimension()`.
+* `Eigen::VectorXd`: Resulting vector of length `{layerName}.output_dimension()`.
 
 **Parameters**
 
-* `input` (`MatrixXd`): Input column vector. Must have `input_dimension()` rows and 1 column.
+* `input` (`const Eigen::VectorXd&`): Input column vector. Must have `{layerName}.input_dimension()` elements.
 
 ---
 
@@ -910,7 +913,7 @@ Example: `MeanSquaredError()`
 
 #### compute\_loss
 
-*Signature:* `virtual double compute_loss(const MatrixXd& predictions, const MatrixXd& actuals)`
+*Signature:* `virtual double compute_loss(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals)`
 
 Returns the loss (error) when measured between `predictions` and `actuals`.
 
@@ -920,25 +923,25 @@ Returns the loss (error) when measured between `predictions` and `actuals`.
 
 **Parameters**
 
-* `predictions` (`MatrixXd`): Model's predictions for a given input. Must be a column vector.
-* `actuals` (`MatrixXd`): True values for model predictions. Must be a column vector with the same number of rows as `predictions`.
+* `predictions` (`const Eigen::VectorXd&`): Model's predictions for a given input
+* `actuals` (`const Eigen::VectorXd&`): True values for model predictions. Must have the same number of rows as `predictions`.
 
 ---
 
 #### compute\_loss\_gradient
 
-*Signature:* `virtual VectorXd compute_loss_gradient(const MatrixXd& predictions, const MatrixXd& actuals)`
+*Signature:* `virtual Eigen::VectorXd compute_loss_gradient(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals)`
 
 Returns the gradient of the losses when measured between `predictions` and `actuals`.
 
 **Returns**
 
-* `VectorXd`: Calculator's loss gradient of the model predictions.
+* `Eigen::VectorXd`: Calculator's loss gradient of the model predictions.
 
 **Parameters**
 
-* `predictions` (`MatrixXd`): Model's predictions for a given input. Must be a column vector.
-* `actuals` (`MatrixXd`): True values for model predictions. Must be a column vector with the same number of rows as `predictions`.
+* `predictions` (`const Eigen::VectorXd&`): Model's predictions for a given input
+* `actuals` (`const Eigen::VectorXd&`): True values for model predictions. Must have the same number of rows as `predictions`.
 
 ---
 
@@ -961,12 +964,12 @@ Returns the identifying string of the loss calculator.
 
 Abstract class for network optimizers.
 
-An Optimizer's only abstract method, `step`, is called internally by a `Network`.
-Users should never call the `step` method directly.
+An Optimizer's abstract methods, `clear_state` and `step`, are called internally by a `Network`.
+Users should not call the methods directly.
 
 Pre-implemented concrete subclasses:
 
-* `SGD`, for Stochastic Gradient Descent
+* `SGD`, a Stochastic Gradient Descent optimizer
 
 ---
 
@@ -980,12 +983,22 @@ Creates a new Stochastic Gradient Descent (SGD) optimizer with the assigned lear
 
 **Parameters**
 
-* `learning_rate` (`double`): Learning rate to use, dictating speed and precision of convergence. Must be positive. Default: `0.01`.
-* `momentum_coefficient` (`double`): Momentum coefficient to use. Cannot be negative. Default: `0`.
+* `learning_rate` (`double`): Learning rate to use, dictating speed and precision of convergence. Must be positive. Default: 0.01.
+* `momentum_coefficient` (`double`): Momentum coefficient to use. Cannot be negative. Default: 0.
 
 ---
 
 ### Methods
+
+#### clear_state
+
+*Signature:* `virtual void clear_state()`
+
+Resets the optimizer's internal state, allowing it to handle network architecture changes.
+
+Called internally by a Network when the Network is disabled.
+
+---
 
 #### name
 
@@ -1007,22 +1020,26 @@ If not overridden, returns `"optimizer"`.
 ```
 virtual void step(
     vector<Layer>& layers,
-    const VectorXd& initial_input,
+    const Eigen::VectorXd& initial_input,
     const vector<LayerCache>& intermediate_outputs,
-    const MatrixXd& predictions,
-    const MatrixXd& actuals,
+    const Eigen::VectorXd& predictions,
+    const Eigen::VectorXd& actuals,
     const std::shared_ptr<LossCalculator> loss_calculator
 )
 ```
 
-Performs an optimization step on the network’s layers using gradients calculated from `predictions` and `actuals`.  
+Performs an optimization step, updating the network’s layers using gradients calculated from `predictions` and `actuals`.  
 This method is used internally by a Network, and is not intended to be called directly by users.
+
+This method mutates `layers`.
+
+`LayerCache` is a helper struct, defined in "layer.cpp", that contains a pre-activation and post-activation vector.
 
 **Parameters**
 
 * `layers` (`vector<Layer>&`): Vector of layers to optimize.
-* `initial_input` (`const VectorXd&`): Input originally provided to the network.
+* `initial_input` (`const Eigen::VectorXd&`): Input originally provided to the network.
 * `intermediate_outputs` (`const vector<LayerCache>&`): Outputs from each layer before and after activation.
-* `predictions` (`const MatrixXd&`): Final output of the network for `initial_input`.
-* `actuals` (`const MatrixXd&`): Target output corresponding to `initial_input`.
+* `predictions` (`const Eigen::VectorXd&`): Final output of the network for `initial_input`.
+* `actuals` (`const Eigen::VectorXd&`): Target output corresponding to `initial_input`.
 * `loss_calculator` (`const std::shared_ptr<LossCalculator>`): Smart pointer to the loss calculator used for computing gradients.

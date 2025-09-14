@@ -20,7 +20,7 @@ public:
      * @param actuals true values for model predictions
      * @return calculator's loss of the model predictions
      */
-    virtual double compute_loss(const MatrixXd& predictions, const MatrixXd& actuals) = 0;
+    virtual double compute_loss(const VectorXd& predictions, const VectorXd& actuals) = 0;
 
     /**
      * Returns the gradient of the losses when measured between `predictions` and `actuals`.
@@ -31,7 +31,7 @@ public:
      * @param actuals true values for model predictions
      * @return calculator's loss gradient of the model predictions
      */
-    virtual VectorXd compute_loss_gradient(const MatrixXd& predictions, const MatrixXd& actuals) = 0;
+    virtual VectorXd compute_loss_gradient(const VectorXd& predictions, const VectorXd& actuals) = 0;
 
     /**
      * @return the identifying string of the loss calculator
@@ -70,7 +70,7 @@ public:
      * @param actuals true values for model predictions
      * @return cross entropy calculator's loss of the model predictions
      */
-    double compute_loss(const MatrixXd& predictions, const MatrixXd& actuals) override {
+    double compute_loss(const VectorXd& predictions, const VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actual network outputs must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Number of rows in predictions and actuals must be equal"));
@@ -97,7 +97,7 @@ public:
      * @param actuals true values for model predictions
      * @return gradient of cross-entropy calculator's loss of the model predictions
      */
-    VectorXd compute_loss_gradient(const MatrixXd& predictions, const MatrixXd& actuals) override {
+    VectorXd compute_loss_gradient(const VectorXd& predictions, const VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actual network outputs must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Number of rows in predictions and actuals must be equal"));
@@ -141,7 +141,7 @@ public:
      * @param actuals true values for model predictions
      * @return MSE calculator's loss of the model predictions
      */
-    double compute_loss(const MatrixXd& predictions, const MatrixXd& actuals) override {
+    double compute_loss(const VectorXd& predictions, const VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actuals must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Predictions and actuals must have the same dimension"));
@@ -159,7 +159,7 @@ public:
      * @param actuals true values for model predictions
      * @return gradient of MSE calculator's loss of the model predictions
      */
-    VectorXd compute_loss_gradient(const MatrixXd& predictions, const MatrixXd& actuals) override {
+    VectorXd compute_loss_gradient(const VectorXd& predictions, const VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actuals must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Predictions and actuals must have the same dimension for gradient calculation"));

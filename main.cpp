@@ -415,6 +415,145 @@ void test_add_remove() {
 
 
 
+/**
+ * Trains a network, changes its architecture, then resumes network training.
+ * 
+ * Uses the binary to one-hot conversion problem.
+ */
+void test_hot_swap() {
+
+    const int N_INPUTS = 5; //Arbitary positive constant
+    const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
+    const int N_INITIAL_EPOCHS = 10; //Positive constant
+    const int N_FINAL_EPOCHS = 500;
+
+    Network net = Network();
+
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.0005, 0.9);
+    net.set_optimizer(optimizer);
+    optimizer.reset();
+
+    shared_ptr<MeanSquaredError> old_loss_calc = make_shared<MeanSquaredError>();
+    net.set_loss_calculator(old_loss_calc);
+    //Keep the loss calculator outside the network for per-epoch loss calculations
+
+    //add layers
+    shared_ptr<Relu> relu_activ = make_shared<Relu>();
+    shared_ptr<Softmax> softmax_activ = make_shared<Softmax>();
+    net.add_layer(N_INPUTS, 10, relu_activ, "original_input_layer");
+    net.add_layer(10, N_OUTPUTS, relu_activ, "original_output_layer");
+
+    //get inputs and corresponding expected outputs
+    vector<VectorXd> inputs;
+    vector<VectorXd> expected_outputs;
+    for(int i=0; i<N_OUTPUTS; i++) {
+        VectorXd current_input = decimal_to_binary(N_INPUTS, i);
+        inputs.push_back(current_input);
+
+        VectorXd current_output = one_hot_vectorxd(N_OUTPUTS, i);
+        expected_outputs.push_back(current_output);
+    }
+
+    cout << "Old network:\n" << net << endl;
+
+    //enable training
+    net.enable();
+
+    cout << "Training started for " << N_INPUTS << " inputs, " << N_INITIAL_EPOCHS << " epochs" << endl;
+
+    //train
+    for(int e=1; e<=N_INITIAL_EPOCHS; e++) {
+        double current_loss = 0;
+        for(int i=0; i<inputs.size(); i++) {
+            VectorXd current_result = net.forward(inputs[i]);
+            current_loss += old_loss_calc->compute_loss(current_result, expected_outputs[i]);
+            net.reverse(current_result, expected_outputs[i]);
+        }
+
+        if(e%5==0) {
+            cout << "Total loss for " << e << " epochs: " << current_loss << endl;
+        }
+    }
+
+    //test model on each of the inputs. Model output is determined to be the maximum value.
+    int n_correct = 0;
+    for(int i=0; i<N_OUTPUTS; i++) {
+        VectorXd test_input = decimal_to_binary(N_INPUTS, i);
+        VectorXd test_output = net.forward(test_input, false);
+
+        //find maximum index
+        double max = -99999;
+        int max_index = -1;
+        for(int v=0; v<test_output.size(); v++) {
+            if(test_output(v) > max) {
+                max = test_output(v);
+                max_index = v;
+            }
+        }
+
+        //update number of correct predictions
+        if(max_index == i) {
+            n_correct++;
+        }
+    }
+    cout << "Number correct: " << n_correct << " out of " << N_OUTPUTS << endl;
+
+
+    //Add layers and update the loss calculator
+    net.disable();
+
+    net.insert_layer_at(1, Layer(10, 20, relu_activ, "new_layer_0"));
+    net.insert_layer_at(2, Layer(20, N_OUTPUTS, relu_activ, "new_layer_1"));
+    net.remove_layer("original_output_layer");
+    net.add_layer(N_OUTPUTS, N_OUTPUTS, softmax_activ, "new_output_layer");
+
+    shared_ptr<CrossEntropy> new_loss_calc = make_shared<CrossEntropy>();
+    net.set_loss_calculator(new_loss_calc);
+
+    cout << "\nNew network:\n" << net << endl;
+    net.enable();
+    cout << "Training restarted for " << N_INPUTS << " inputs, " << N_FINAL_EPOCHS << " epochs" << endl;
+
+
+    //Retrain
+    for(int e=1; e<=N_FINAL_EPOCHS; e++) {
+        double current_loss = 0;
+        for(int i=0; i<inputs.size(); i++) {
+            VectorXd current_result = net.forward(inputs[i]);
+            current_loss += new_loss_calc->compute_loss(current_result, expected_outputs[i]);
+            net.reverse(current_result, expected_outputs[i]);
+        }
+
+        if(e%100==0) {
+            cout << "Total loss for " << e << " epochs: " << current_loss << endl;
+        }
+    }
+
+    //Re-evaluate
+    n_correct = 0;
+    for(int i=0; i<N_OUTPUTS; i++) {
+        VectorXd test_input = decimal_to_binary(N_INPUTS, i);
+        VectorXd test_output = net.forward(test_input, false);
+
+        //find maximum index
+        double max = -99999;
+        int max_index = -1;
+        for(int v=0; v<test_output.size(); v++) {
+            if(test_output(v) > max) {
+                max = test_output(v);
+                max_index = v;
+            }
+        }
+
+        //update number of correct predictions
+        if(max_index == i) {
+            n_correct++;
+        }
+    }
+    cout << "Number correct: " << n_correct << " out of " << N_OUTPUTS << endl;
+}
+
+
 int main() {
-   test_training_binconvert();
+    test_hot_swap();
 }
