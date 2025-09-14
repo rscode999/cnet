@@ -416,6 +416,5 @@ void test_add_remove() {
 
 
 int main() {
-    Network net = Network();
-    net.set_loss_calculator(shared_ptr<CrossEntropy>());
+   test_training_binconvert();
 }

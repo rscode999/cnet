@@ -5,6 +5,9 @@
 using namespace std;
 using namespace Eigen;
 
+/**
+ * Abstract class for calculating loss
+ */
 class LossCalculator {
 public:
 

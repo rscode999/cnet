@@ -1,4 +1,7 @@
 # PROJECT RULES
+
+[Back to README](README.md)
+
 This is a project of rules and regulations! Read this document thoroughly before
 starting work on the project!
 As a friendly reminder, failure to follow the rules means I will hunt you down and [DATA EXPUNGED].
@@ -32,11 +35,11 @@ any additional text must be on a new line.
 One or two lines of important notice for clients, i.e. preconditions not enforceable by assertions, or details that are easy to overlook.  
 This section must contain "Helper to {parent method name}" if the method is a private helper to another method.
 
-@param param1 the first parameter, followed by a period. Then state any preconditions on the parameter, followed by a period. If the parameter has a default value, state "Default: {default value}".
-@param param2...
-@return some value. Return value descriptions are required! Must come immediately after the parameters 
-@throws some_exception...*
-@throws some_other_exception...*
+@param param1 the first parameter, followed by a period. Then state any preconditions on the parameter, followed by a period. If the parameter has a default value, state "Default: {default value}".  
+@param param2...  
+@return some value. Return value descriptions are required! Must come immediately after the parameters   
+@throws some_exception...*  
+@throws some_other_exception...*  
 
 *Exceptions thrown must be listed in alphabetical order.
 
@@ -67,7 +70,7 @@ Class docstrings need not include parameters, return values, or exception inform
  * Returns `input` with all indices at and after `start_index` divided by 2.
  * 
  * This method cannot be called if the class attribute `reference_count` 
- * is negative (throws `illegal_state`).
+ * is negative (throws `illegal_state` if so).
  * 
  * @param input input vector to halve
  * @param start_index index to begin division at. Cannot be negative. Default: 0
@@ -91,7 +94,7 @@ NOT OK, unless specified- `void method(Object& obj)`
 
 All methods must assert their preconditions. Descriptive messages should be used in assertions.  
 Example:  
-`assert((index>=0 && "Index cannot be negative"))`
+`assert((index>=0 && "Index cannot be negative"));`
 
 Any method that takes a pointer type must use smart pointers only. Raw pointers as method parameters are not allowed.  
 This rule applies to getters and setters, so any internal pointers must either be smart pointers or be inaccessible to outside users.
@@ -100,14 +103,14 @@ This rule applies to getters and setters, so any internal pointers must either b
 Multiple inheritance of concrete classes is not allowed!
 
 A class may inherit from, at most, one concrete class.  
-Any other classes inherited must be purely abstract. A purely abstract class has no fields, and all methods are purely virtual.
+Any other classes inherited must be purely abstract. A purely abstract class has no fields, and all its methods are purely virtual.
 
 ## Naming Rules
 
 Class names should use camel case, except that the first letter is capitalized. There should be no spaces between words, where each word's first letter is uppercase.  
 Examples: `MyClass`, `HelloWorldPrinter`, `Calculator`
 
-Field names must use snake case. All letters must be lowercase. Spaces between words should be separated by underscores.  
+Field names must use snake case. In snake case, all letters must be lowercase. Spaces between words should be separated by underscores.  
 Examples: `my_method_1`, `do_something`, `display`
 
 Method names must use snake case.
@@ -358,6 +361,6 @@ public:
 
 
 ## Final Remarks
-No contributors may make references to K-Pop Demon Hunters.
+No contributors or viewers may make references to K-Pop Demon Hunters.
 
 [Back to table of contents](#table-of-contents)

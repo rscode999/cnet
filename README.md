@@ -1,7 +1,10 @@
 # CNet
-**Neural network framework implemented from scratch**
+**C++ framework for writing neural networks**
 
-By contributing to this project, you agree to follow the rules listed in the [rules document](rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].
+By contributing to this project, you agree to follow the rules listed in the [rules document](rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
+Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
+
+Additional class and method information is in the [documentation file](documentation.md).
 
 ## Foreword
 I ran my first neural network about 2 years ago. The network was really deep, but I didn't have a good computer, so the network took hours to train.
@@ -12,7 +15,7 @@ Even if speed goals are not met, I still wanted to harness the **full power of C
 
 Although widely used, PyTorch has features that I found confusing. The most striking feature is that optimizers (or "criterions", in PyTorch language) are separate from the network. I thought that an optimizer, as part of the network, belongs inside the network instead of outside it. Another confusing feature is that PyTorch, and Tensorflow too, forces users to make custom classes to build networks instead of having pre-built network objects available.
 
-Using **the power of C++**, I created an original neural network framework with these design goals:
+Using **the power of C++**, I created a neural network framework *from scratch* with these design goals:
 - Have the network be the central container. All network components exist inside a network object.
 - Enable the framework to be extended using abstract classes and polymorphism
 - Use straightforward methods for network configuration
@@ -35,6 +38,9 @@ your-repo-name
 ├── <EIGEN FOLDER GOES HERE>/
 ...
 ```
+
+If you have GnuMake installed, change the `EIGEN_DIRECTORY_PATH` variable in the [Makefile](Makefile) to the name of your Eigen folder.  
+Your executable's name will be `OUTPUT_EXECUTABLE_NAME`.
 
 To use CNet in your program, include the "network.cpp" file in the "cnet" directory:
 ```
@@ -159,10 +165,9 @@ g++ main.cpp  -o cnet  -std=c++14  -I {name of Eigen 3 folder}
 
 If you don't have G++, refer to your compiler's documentation on how to include external directories and use the C++14 standard (or later).
 
-
 ## File Structure
 
-All source code files are found in the "cnet" directory.
+All source code component files are found in the "cnet" folder.
 
 There are 5 main components:
 - `activation_function.cpp`- contains the ActivationFunction class and its subclasses. Smart pointers to ActivationFunctions compute activation functions and their derivatives for layers.
@@ -170,5 +175,7 @@ There are 5 main components:
 - `loss_calculator.cpp`- contains the LossCalculator, which computes output losses and loss gradients for model optimization
 - `optimizer.cpp`- contains the Optimizer, for improving model weights given losses and a LossCalculator
 - `network.cpp`- contains the Network class, which contains all the other components
+
+For more details on what each method does, consult the [documentation](documentation.md).
 
 The top-level directory contains the Makefile and `main.cpp`, which contains functions for testing.

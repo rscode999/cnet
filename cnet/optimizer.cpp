@@ -6,7 +6,7 @@
 
 
 /**
- * Interface (fully abstract class) for network optimizers. Cannot be directly used.
+ * Abstract class for network optimizers. Cannot be directly used.
  * 
  * An Optimizer's only abstract method, `step`, is called internally by a Network.
  * Outside users never directly call the `step` method.
@@ -57,7 +57,7 @@ private:
     struct MomentumCache {
         MatrixXd weight_velocity;
         VectorXd bias_velocity;
-
+        
         MomentumCache(int weight_rows, int weight_cols, int bias_size) {
             weight_velocity = MatrixXd::Zero(weight_rows, weight_cols);
             bias_velocity = VectorXd::Zero(bias_size);
