@@ -3,21 +3,21 @@
 
 Documentation for each class and its methods.
 
+Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).  
+
 [Back to README](README.md)
 
 ## Table of Contents
 
 
-Types of methods:
+Method categories:
 - Constructor: Creates a new instance of the class
 - Getter: Retrieves a class attribute
 - Setter: Changes the value of a class attribute
 - Methods: Any other function that is not a getter or setter
 - Operator Overload: Allows usage of operators on the class
 
-Each section (i.e. Network, ActivationFunction) is for a class.  
-The subsections (i.e. Constructor, Getters, Setters) are types of methods that can be called with the class.
-
+Available classes:
 
 - [Network](#network)
     - [Illegal State Exception](#illegal_state)
@@ -26,7 +26,7 @@ The subsections (i.e. Constructor, Getters, Setters) are types of methods that c
     - [Setters](#setters)
     - [Methods](#methods)
     - [Operator Overloads](#operator-overloads)
-- [ActivationFunction](#activationfunction)
+- [ActivationFunction (Abstract class)](#activationfunction)
     - [Constructor](#constructor-1)
     - [Methods](#methods-1)
 - [Layer](#layer)
@@ -35,10 +35,10 @@ The subsections (i.e. Constructor, Getters, Setters) are types of methods that c
     - [Setters](#setters-1)
     - [Methods](#methods-2)
     - [Operator Overloads](#operator-overloads-1)
-- [LossCalculator](#losscalculator)
+- [LossCalculator (Abstract class)](#losscalculator)
     - [Constructor](#constructor-3)
     - [Methods](#methods-3)
-- [Optimizer](#optimizer)
+- [Optimizer (Abstract class)](#optimizer)
     - [Constructor](#constructor-4)
         - [SGD](#sgd-concrete-class)
     - [Methods](#methods-4)
@@ -55,11 +55,11 @@ A neural network that can be trained and used for predictions.
 
 The user adds layers, a loss calculator, and an optimizer to the network prior to use.
 
-Each layer in a network has an index number, ranging from 0 to `{networkName}.layer_count()` - 1. The first layer in a network has index 0. The second has index 1, the third has index 2, and so on.
+Each layer in a network has an index number, ranging from 0 to `{networkName}.layer_count()` - 1. The first layer in a network has index 0. The second has index 1, the third has index 2, and so on.  
 The input layer is the first layer. The output layer is the last layer.
 
 To use a network, the network must be enabled via `{networkName}.enable()`.
-Once enabled, the network cannot be edited until `{networkName}.disable()` is called.
+Once enabled, the network cannot be edited until `{networkName}.disable()` is called. Getter methods may still be called while a network is enabled.
 
 
 ---
@@ -68,7 +68,7 @@ Once enabled, the network cannot be edited until `{networkName}.disable()` is ca
 
 An exception thrown only by a Network. Thrown when enable/disable rules are broken.
 
-Class name: `illegal_state`. A subclass of `std::runtime_error`.
+`illegal_state` is a subclass of `std::runtime_error`.
 
 Example: `illegal_state` would be thrown if a Network's `forward` method is called while it's disabled.
 
@@ -244,9 +244,11 @@ To use this method, the network must be disabled.
 
 *Signature*: `void add_layer(int input_dimension, int output_dimension, std::string name = "layer")`
 
-Adds a new layer with the given dimensions and name. The new layer has no activation function.
+Adds a new layer with the given dimensions and name. The new layer has no activation function.*
 
 To use this method, the network must be disabled.
+
+*The activation function is the identity function, f(x)=x, which does nothing.
 
 **Parameters**
 
@@ -336,9 +338,9 @@ To use this method, the network must be disabled.
 
 #### remove\_layer
 
-*Signature*: `void remove_layer(std::string layer_name)`
+*Signature*: `void remove_layer(std::string removal_name)`
 
-Removes a layer with the name `layer_name`.
+Removes a layer with the name `removal_name`.
 
 The first layer with a matching name, i.e. the one with the lowest index number, is removed.
 If no matching layer names are found, throws `out_of_range`.
@@ -347,7 +349,7 @@ To use this method, the network must be disabled.
 
 **Parameters**
 
-* `layer_name` (`std::string`): Name of the layer to remove.
+* `removal_name` (`std::string`): Name of the layer to remove.
 
 **Exceptions**
 
@@ -395,7 +397,9 @@ Unlike most setters, this method can be called when the network is enabled.
 
 Sets the activation function for a given layer.
 
-To use this method, the network must be disabled.
+To remove a layer's activation function, set the function to a `shared_ptr<IdentityActivation>`. The `IdentityActivation` applies the identity function f(x)=x to its inputs, effictively doing nothing.
+
+The network must be disabled to use this method.
 
 **Parameters**
 
@@ -491,7 +495,7 @@ To use this method, the network must be disabled.
 
 Returns the output of the network for a given input.
 
-If `training` is true, intermediate outputs are stored for backpropagation.
+If `training` is true, intermediate outputs are stored for backpropagation, allowing `{networkName}.reverse` to be called.
 
 **Returns**
 
@@ -574,7 +578,7 @@ Equivalent to `{networkName}.add_layer(new_layer)`.
 
 Exports `network` to the output stream `os`, returning a reference to `os` with `network` added.
 
-The exported network, as a std::string, contains its enabled/disabled status, loss calculator, optimizer, and all layers.
+The exported network, as a `std::string`, contains the Network's enabled/disabled status, loss calculator, optimizer, and layers.
 
 **Returns**
 
@@ -594,11 +598,15 @@ The exported network, as a std::string, contains its enabled/disabled status, lo
 
 Abstract class representing an activation function, along with all functions required to perform backpropagation.
 
+Commonly used when pointed to by a `shared_ptr` smart pointer.
+
 Pre-implemented concrete subclasses:
-- `IdentityActivation`, a placeholder that does nothing to its input
-- `Relu`, the Rectified Linear Unit (ReLU) function
-- `Sigmoid`
-- `Softmax`. The only layer that can use `Softmax` activation is the final layer.
+- `IdentityActivation` (name: "none"), a placeholder that does nothing to its input
+- `Relu` (name: "relu"), the Rectified Linear Unit (ReLU) function
+- `Sigmoid` (name: "sigmoid")
+- `Softmax` (name: "softmax"). The only layer that can use `Softmax` activation is the final layer.
+
+Names are accessed using the `name` method.
 
 ---
 
@@ -651,9 +659,13 @@ Applies the derivative of the activation function element-wise to the input.
 Returns the unique identifier for the activation function.
 If not overridden, returns `"none"`.
 
+`IdentityActivation`'s name is "none".
+
+A function object's name is usually the class's name converted to lowercase, with underscores separating each word. Example: `Relu`'s name is "relu".
+
 **Returns**
 
-* `std::string`: Name of the activation function, typically lowercase (e.g. `"relu"`).
+* `std::string`: Name of the activation function.
 
 ---
 
@@ -692,7 +704,7 @@ They can be manually viewed or updated using getter and setter methods.
 
 Creates a new Layer and initializes all fields. The activation function is set to the identity activation function, f(x)=x, which does nothing.
 
-All weights and biases are randomly initialized in the range `[-1, 1]`.
+All weights and biases are randomly initialized on the uniform interval [-1, 1].
 
 **Parameters**
 
@@ -706,7 +718,7 @@ All weights and biases are randomly initialized in the range `[-1, 1]`.
 
 *Signature:* `Layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer")`
 
-Creates a new Layer and loads it with the provided fields. Weights and biases are randomly initialized in the range `[-1, 1]`.
+Creates a new Layer and loads it with the provided fields. Weights and biases are randomly initialized in the uniform range [-1, 1].
 
 **Parameters**
 
@@ -870,14 +882,16 @@ Applies weights and adds biases.
 
 Exports `layer` to the output stream `os`, returning a new output stream with `layer` inside.
 
+**Returns**
+
+* `std::ostream&`: Output stream with `layer` added.
+
 **Parameters**
 
 * `os` (`std::ostream&`): Output stream to write to.
 * `layer` (`Layer`): Layer to export.
 
-**Returns**
 
-* `std::ostream&`: Output stream with `layer` added.
 
 
 ---
@@ -888,7 +902,7 @@ Exports `layer` to the output stream `os`, returning a new output stream with `l
 
 Abstract class for calculating loss.
 
-A smart pointer to a `LossCalculator` can be used by a `Network`.
+A `shared_ptr` smart pointer to a `LossCalculator` can be used by a `Network`.
 
 Pre-implemented concrete subclasses:
 
@@ -966,6 +980,8 @@ Abstract class for network optimizers.
 
 An Optimizer's abstract methods, `clear_state` and `step`, are called internally by a `Network`.
 Users should not call the methods directly.
+
+A `shared_ptr` smart pointer to an `Optimizer` instance can be used by a `Network`.
 
 Pre-implemented concrete subclasses:
 

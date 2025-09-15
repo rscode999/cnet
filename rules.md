@@ -151,7 +151,7 @@ All methods must conform to the [Method Rules](#method-rules).
 
 Underneath each row of comment lines is a section header. The section header should also appear in the class definition.
 
-A class does not need to have all the listed sections.
+A class does not need to have all the listed sections. Omit any sections that a class doesn't have.
 
 The `public` and `private` markers must be at the same level of indentation as the outside of the class.
 
@@ -165,12 +165,11 @@ Constants, whose names are in all caps, with a descriptive name.
 Must be declared in a logical order. If no logical order exists, declare in alphabetical order by variable name.  
 *Docstrings must be included.*  
 Example:  
-
 ```
 /**
  * The error message to use if none is provided.
  */
-const string DEFAULT_ERROR_MESSAGE = "error";
+const std::string DEFAULT_ERROR_MESSAGE = "error";
 
 /**
  * Maximum allowed layers in a network.
@@ -178,7 +177,7 @@ const string DEFAULT_ERROR_MESSAGE = "error";
 const int MAX_LAYERS = 1000;
 ```
 
-Constants can be public.
+Constants can have public access.
 
 //////////////////////////////////////////////////////////////  
 
@@ -212,7 +211,7 @@ Setter methods (methods that change the value of a private field), in alphabetic
 
 
 //////////////////////////////////////////////////////////////  
-//METHODS (or: ADDITIONAL METHODS)
+//METHODS (alternative title: ADDITIONAL METHODS)
 
 Additional methods  
 All additional methods should be in alphabetical order by the method's name.
@@ -362,5 +361,7 @@ public:
 
 ## Final Remarks
 No contributors or viewers may make references to K-Pop Demon Hunters.
+
+If you disagree with any of the rules, click [here](https://www.youtube.com/watch?v=xvFZjo5PgG0) to file a complaint.
 
 [Back to table of contents](#table-of-contents)

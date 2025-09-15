@@ -66,7 +66,7 @@ shared_ptr<Relu> relu_activation_function_ptr = make_shared<Relu>();
 net.add_layer(Layer(3, 5, relu_activation_function_ptr));
 
 //Add a layer with 5 inputs, 10 outputs, and no activation
-net.add_layer(Layer(3, 5));
+net.add_layer(Layer(5, 10));
 
 //Add a layer with 10 inputs, 2 outputs, and no activation, without using an explicit constructor
 net.add_layer(10, 2);
@@ -93,6 +93,10 @@ net.set_optimizer(make_shared<SGD>());
 
 Note: Both `set_loss_calculator` and `set_optimizer` use smart pointers, to enable memory-safe polymorphism.
 
+To check the network's configuration, feed the network directly to the standard output stream:
+```
+std::cout << net;
+```
 
 To use the network, enable it:
 ```
@@ -149,6 +153,7 @@ Add layers, remove layers, change weight/bias matrices...
 //Re-enables the network for continued training
 net.enable();
 ```
+While enabled, a network's attributes cannot be changed. Attributes can still be retrieved.
 
 
 To compile the network, use the provided Makefile if your have GnuMake installed:
@@ -157,7 +162,7 @@ make c
 ```
 You may need to change the Makefile variables `MAIN`, `OUTPUT_EXECUTABLE_NAME`, and `EIGEN_DIRECTORY_PATH` to where you put your main function, the desired executable filename, and the name of your Eigen 3 folder.
 
-If you don't have GnuMake and you have the G++ compiler installed, this command should compile your executable. Replace "main.cpp" with your main function's filename and "cnet" with your desited executable's name.
+If you don't have GnuMake and you have the G++ compiler installed, this command should compile your executable. Replace "main.cpp" with your main function's filename and "cnet" with your desired executable's name.
 Ensure {name of Eigen 3 folder} is replaced with the actual folder's name:
 ```
 g++ main.cpp  -o cnet  -std=c++14  -I {name of Eigen 3 folder}

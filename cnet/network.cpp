@@ -380,13 +380,13 @@ void insert_layer_at(int new_pos, Layer new_layer) {
  * @throws `illegal_state` if the network is enabled
  * @throws `out_of_range` if no layer's name matches `removal_name`
  */
-void remove_layer(string layer_name) {
+void remove_layer(string removal_name) {
     if(enabled) {
         throw illegal_state("Cannot remove layers by name while the network is enabled");
     }
 
     for(int i=0; i<layers.size(); i++) {
-        if(layers[i].name() == layer_name) {
+        if(layers[i].name() == removal_name) {
             layers.erase(layers.begin() + i);
             return;
         }
@@ -560,7 +560,7 @@ void set_weights_at(int layer_number, MatrixXd new_weights) {
  * 
  * Requires that the network is enabled. If not, the method throws `illegal_state`.
  * 
- * @param input input to the network (Eigen::VectorXd is accepted). Must have `{networkName}.input_dimension()` rows
+ * @param input input to the network. Must have `{networkName}.input_dimension()` rows
  * @param training true if  training the network, false if getting results for evaluation only. Default: `true`
  * @return the network's output, as a VectorXd of dimension `{networkName}.output_dimension()`
  * @throws `illegal_state` if the network is not enabled
@@ -605,7 +605,7 @@ VectorXd forward(const VectorXd& input, bool training = true) {
  * 
  * Requires that the network is enabled.
  * 
- * @param input input to the network (Eigen::VectorXd is accepted). Must have `{networkName}.input_dimension()` rows
+ * @param input input to the network. Must have `{networkName}.input_dimension()` rows
  * @return the network's output, as a VectorXd of dimension `{networkName}.output_dimension()`
  * @throws `illegal_state` if the network is not enabled
  */
@@ -631,7 +631,7 @@ VectorXd predict(const VectorXd& input) {
  * 
  * @param predictions what the network predicts for a given input
  * @param actuals expected output for the network's prediction
- * @throws `illegal_state` if the network is not enabled
+ * @throws `illegal_state` if the network is not enabled, or a feed-forward training operation was not done
  */
 void reverse(const VectorXd& predictions, const VectorXd& actuals) {
     assert((predictions.cols() == 1 && "Reverse process predictions must be a column vector"));

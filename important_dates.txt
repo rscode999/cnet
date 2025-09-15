@@ -1,4 +1,6 @@
 2025-08-26: Work begins
 2025-09-06: CNet converged to the XOR dataset for the first time
 2025-09-11: Added softmax activation. Outputs became extremely confident
-2025-09-13: Version 1.0 completed and documented 
+2025-09-13: All features implemented and documented
+2025-09-14: Version 1.0 ready. Reverse process hotfix completed
+2025-09-14: The day I secure my place in Agua Clara!
