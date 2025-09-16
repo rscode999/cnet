@@ -6,20 +6,15 @@
 
 
 /**
- * Abstract class for network optimizers. Cannot be directly used.
+ * Abstract class for network optimizers. 
  * 
- * An Optimizer's only abstract method, `step`, is called internally by a Network.
- * Outside users never directly call the `step` method.
+ * Its `clear_state` and `step` methods are private and cannot be directly used.
  */
 class Optimizer {
-public:
 
-    /**
-     * Resets the optimizer's internal state, allowing it to handle network architecture changes.
-     * 
-     * Called internally by a Network when the Network is disabled.
-     */
-    virtual void clear_state() = 0;
+friend class Network;
+
+public:
 
     /**
      * @return the optimizer's identifying string. If not overridden, returns `"optimizer"`.
@@ -27,6 +22,15 @@ public:
     virtual string name() {
         return "optimizer";
     }
+
+private:
+
+    /**
+     * Resets the optimizer's internal state, allowing it to handle network architecture changes.
+     * 
+     * Called internally by a Network when the Network is disabled.
+     */
+    virtual void clear_state() = 0;
 
     /**
      * Updates `layers` using the optimizer's method.
@@ -43,6 +47,8 @@ public:
     virtual void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
         const VectorXd& predictions, const VectorXd& actuals, const shared_ptr<LossCalculator> loss_calculator) = 0;
     
+
+public:
     /**
      * Properly destroys an Optimizer.
      */
@@ -56,6 +62,8 @@ public:
  * A Stochastic Gradient Descent (SGD) optimizer
  */
 class SGD : public Optimizer {
+
+friend class Network;
 
 private:
     /**
@@ -122,18 +130,21 @@ public:
 
 
     /**
-     * Removes the SGD optimizer's weight and bias velocities, preparing it to handle a different network architecture.
-     */
-    void clear_state() override {
-        momentum_cache.clear();
-    }
-
-
-    /**
      * @return `"sgd"`, the optimizer's identifying string
      */
     string name() override {
         return "sgd";
+    }
+
+
+
+private:
+
+    /**
+     * Removes the SGD optimizer's weight and bias velocities, preparing it to handle a different network architecture.
+     */
+    void clear_state() override {
+        momentum_cache.clear();
     }
 
 
@@ -149,6 +160,7 @@ public:
      */
     void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
         const VectorXd& predictions, const VectorXd& actuals, const shared_ptr<LossCalculator> loss_calculator) override {
+        //The entire network is not passed in. This allows one-way friend access
         
         assert((predictions.cols() == 1 && "Predicted values must be a column vector"));
         assert((predictions.rows() == layers.back().output_dimension() && "Predicted value vector must have dimension equal to the network's output dimension"));

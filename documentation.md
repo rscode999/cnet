@@ -1006,15 +1006,6 @@ Creates a new Stochastic Gradient Descent (SGD) optimizer with the assigned lear
 
 ### Methods
 
-#### clear_state
-
-*Signature:* `virtual void clear_state()`
-
-Resets the optimizer's internal state, allowing it to handle network architecture changes.
-
-Called internally by a Network when the Network is disabled.
-
----
 
 #### name
 
@@ -1026,6 +1017,21 @@ If not overridden, returns `"optimizer"`.
 **Returns**
 
 * `std::string`: Name of the optimizer.
+
+---
+
+### Private Methods
+
+A Network calls these methods through its friend access to the Optimizer.  
+Users have no direct access to these methods.
+
+#### clear_state
+
+*Signature:* `virtual void clear_state()`
+
+Resets the optimizer's internal state, allowing it to handle network architecture changes.
+
+Called internally by a Network when the Network is disabled.
 
 ---
 
@@ -1044,8 +1050,7 @@ virtual void step(
 )
 ```
 
-Performs an optimization step, updating the network’s layers using gradients calculated from `predictions` and `actuals`.  
-This method is used internally by a Network, and is not intended to be called directly by users.
+Performs an optimization step, updating the network’s layers using gradients calculated from `predictions` and `actuals`.
 
 This method mutates `layers`.
 
