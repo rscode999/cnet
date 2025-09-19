@@ -23,6 +23,23 @@ public:
         return "optimizer";
     }
 
+    /**
+     * Sets the optimizer's hyperparameters.
+     * The purpose of each index in `hyperparameters` depends on the optimizer.
+     * 
+     * Example: For SGD optimizers, index 0 is the new learning rate, and index 1 is for the new momentum coefficient.
+     * 
+     * @param hyperparameters vector of new hyperparameters to set (exact parameters depends on the optimizer)
+     */
+    virtual void set_hyperparameters(const vector<double>& hyperparameters) = 0;
+
+    /**
+     * @return detailed information about the optimizer, including hyperparameters
+     */
+    virtual string to_string() {
+        return "optimizer";
+    }
+
 private:
 
     /**
@@ -33,9 +50,11 @@ private:
     virtual void clear_state() = 0;
 
     /**
-     * Updates `layers` using the optimizer's method.
+     * Updates `layers` in-place using the optimizer's method, using calculated gradients.
      * 
-     * Used internally by a Network. Not intended to be called by a user.
+     * This is a private method. Not intended to be called by a user.
+     * 
+     * Mutates `layers`.
      * 
      * @param layers vector of layers to optimize
      * @param initial_input value that was first given to the network
@@ -128,6 +147,27 @@ public:
         momentum_coeff = momentum_coefficient;
     }   
 
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //GETTERS
+
+    
+    /**
+     * @return the SGD optimizer's learning rate
+     */
+    double learning_rate() {
+        return learn_rate;
+    }
+
+
+    /**
+     * @return the SGD optimizer's momentum coefficient
+     */
+    double momentum_coefficient() {
+        return momentum_coeff;
+    }
+
 
     /**
      * @return `"sgd"`, the optimizer's identifying string
@@ -137,8 +177,59 @@ public:
     }
 
 
+    /**
+     * @return string containing the optimizer's name, its learning rate, and its momentum coefficient
+     */
+    string to_string() override {
+        return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //SETTERS
+
+    /**
+     * Sets the SGD optimizer's hyperparameters to `hyperparameters`.
+     * Index 0 contains the new learning rate. Index 1 contains the new momentum coefficient.
+     * 
+     * Index 0 must be positive. Index 1 must be non-negative.
+     * 
+     * @param hyperparameters vector of new hyperparameters. Must be of length 2, where index 0 is positive and index 1 is non-negative
+     */
+    void set_hyperparameters(const vector<double>& hyperparameters) override {
+        assert((hyperparameters.size() == 2 && "Hyperparameter list for SGD optimizer must be of length 2"));
+        assert((hyperparameters[0]>0 && "Index 0 of new SGD hyperparameters (learning rate) must be positive"));
+        assert((hyperparameters[1]>=0 && "Index 1 of new SGD hyperparameters (momentum coefficient) must be non-negative"));
+
+        learn_rate = hyperparameters[0];
+        momentum_coeff = hyperparameters[1];
+    }
+
+
+    /**
+     * Sets the optimizer's learning rate to `new_learning_rate`.
+     * @param new_learning_rate learning rate to use. Must be positive
+     */
+    void set_learning_rate(double new_learning_rate) {
+        assert((new_learning_rate>0 && "New learning rate must be positive"));
+        learn_rate = new_learning_rate;
+    }
+
+    
+    /**
+     * Sets the optimizer's momentum coefficient to `new_momentum_coefficient`.
+     * @param new_momentum_coefficient momentum coefficient to use. Cannot be negative
+     */
+    void set_momentum_coefficient(double new_momentum_coefficient) {
+         assert((new_momentum_coefficient>=0 && "New momentum coefficient cannot be negative"));
+         momentum_coeff = new_momentum_coefficient;
+    }
+
 
 private:
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //METHODS (PRIVATE)
 
     /**
      * Removes the SGD optimizer's weight and bias velocities, preparing it to handle a different network architecture.

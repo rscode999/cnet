@@ -16,9 +16,9 @@ class ActivationFunction {
 public:
 
     /**
-     * Returns the output of the given activation function
+     * Returns the output of the given activation function applied to each element of `input`.
      * @param input value to calculate 
-     * @return `input` after applying this activation function element-wise
+     * @return copy of `input` after applying this activation function element-wise
      */
     virtual VectorXd compute(const VectorXd& input) = 0;
 

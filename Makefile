@@ -1,4 +1,4 @@
-MAIN='tests.cpp' #Put your path to a file containing `main` here
+MAIN='main.cpp' #Put your path to a file containing `main` here
 OUTPUT_EXECUTABLE_NAME='a'
 EIGEN_DIRECTORY_PATH='eigen3_4_0/' #Put your path to the Eigen 3 folder here
 

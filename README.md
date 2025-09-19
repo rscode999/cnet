@@ -1,10 +1,10 @@
 # CNet
 **C++ framework for writing neural networks**
 
-By contributing to this project, you agree to follow the rules listed in the [rules document](rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
+By contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
 Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
 
-Additional class and method information is in the [documentation file](documentation.md).
+Additional class and method information is in the [documentation file](documentation/documentation.md).
 
 ## Foreword
 I ran my first neural network about 2 years ago. The network was really deep, but I didn't have a good computer, so the network took hours to train.
@@ -181,6 +181,6 @@ There are 5 main components:
 - `optimizer.cpp`- contains the Optimizer, for improving model weights given losses and a LossCalculator
 - `network.cpp`- contains the Network class, which contains all the other components
 
-For more details on what each method does, consult the [documentation](documentation.md).
+For more details on what each method does, consult the [documentation](documentation/documentation.md).
 
 The top-level directory contains the Makefile and `main.cpp`, which contains functions for testing.

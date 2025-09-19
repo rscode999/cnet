@@ -1,6 +1,6 @@
 # PROJECT RULES
 
-[Back to README](README.md)
+[Back to README](../README.md)
 
 This is a project of rules and regulations! Read this document thoroughly before
 starting work on the project!

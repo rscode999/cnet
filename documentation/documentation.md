@@ -5,7 +5,7 @@ Documentation for each class and its methods.
 
 Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).  
 
-[Back to README](README.md)
+[Back to README](../README.md)
 
 ## Table of Contents
 
@@ -39,10 +39,7 @@ Available classes:
     - [Constructor](#constructor-3)
     - [Methods](#methods-3)
 - [Optimizer (Abstract class)](#optimizer)
-    - [Constructor](#constructor-4)
-        - [SGD](#sgd-concrete-class)
-    - [Methods](#methods-4)
-
+    - [Detailed optimizer documentation ->](optimizers.md)
 
 ---
 ---
@@ -468,6 +465,22 @@ To use this method, the network must be disabled.
 
 ---
 
+#### set\_optimizer\_hyperparameters
+*Signature*: `void set_optimizer_hyperparameters(const std::vector<double>& hyperparameters)`
+
+Sets the optimizer's hyperparameters.
+The purpose of each index in `hyperparameters` depends on the optimizer.
+
+Example: For SGD optimizers, index 0 is the new learning rate, and index 1 is for the new momentum coefficient.
+
+See the [optimizer-specific documentation](optimizers.md) for more information about particular optimizers.
+
+**Parameters**
+
+* `hyperparameters` (`const std::vector<double>&`): Vector of new hyperparameters to set. Preconditions vary, depending on the specific optimizer used.
+
+---
+
 #### set\_weights\_at
 
 *Signature*: `void set_weights_at(int layer_number, Eigen::MatrixXd new_weights)`
@@ -821,7 +834,7 @@ Sets the layer's activation function to `new_activation_function`.
 
 *Signature:* `void set_bias_vector(Eigen::VectorXd new_biases)`
 
-Sets the layer’s bias vector.
+Sets the layer's bias vector.
 
 **Parameters**
 
@@ -845,7 +858,7 @@ Sets the name of the layer.
 
 *Signature:* `void set_weight_matrix(Eigen::MatrixXd new_weights)`
 
-Sets the layer’s weight matrix.
+Sets the layer's weight matrix.
 
 **Parameters**
 
@@ -978,89 +991,16 @@ Returns the identifying string of the loss calculator.
 
 Abstract class for network optimizers.
 
-An Optimizer's abstract methods, `clear_state` and `step`, are called internally by a `Network`.
-Users should not call the methods directly.
-
 A `shared_ptr` smart pointer to an `Optimizer` instance can be used by a `Network`.
 
 Pre-implemented concrete subclasses:
 
 * `SGD`, a Stochastic Gradient Descent optimizer
 
----
+Further info is in the [optimizer-specific documentation](optimizers.md).
 
-### Constructor
-
-#### SGD concrete class
-
-*Signature:* `SGD(double learning_rate = 0.01, double momentum_coefficient = 0)`
-
-Creates a new Stochastic Gradient Descent (SGD) optimizer with the assigned learning rate and momentum coefficient.
-
-**Parameters**
-
-* `learning_rate` (`double`): Learning rate to use, dictating speed and precision of convergence. Must be positive. Default: 0.01.
-* `momentum_coefficient` (`double`): Momentum coefficient to use. Cannot be negative. Default: 0.
 
 ---
-
-### Methods
-
-
-#### name
-
-*Signature:* `virtual std::string name()`
-
-Returns the optimizer’s identifying string.
-If not overridden, returns `"optimizer"`.
-
-**Returns**
-
-* `std::string`: Name of the optimizer.
-
 ---
-
-### Private Methods
-
-A Network calls these methods through its friend access to the Optimizer.  
-Users have no direct access to these methods.
-
-#### clear_state
-
-*Signature:* `virtual void clear_state()`
-
-Resets the optimizer's internal state, allowing it to handle network architecture changes.
-
-Called internally by a Network when the Network is disabled.
-
 ---
-
-#### step
-
-*Signature:*
-
-```
-virtual void step(
-    vector<Layer>& layers,
-    const Eigen::VectorXd& initial_input,
-    const vector<LayerCache>& intermediate_outputs,
-    const Eigen::VectorXd& predictions,
-    const Eigen::VectorXd& actuals,
-    const std::shared_ptr<LossCalculator> loss_calculator
-)
-```
-
-Performs an optimization step, updating the network’s layers using gradients calculated from `predictions` and `actuals`.
-
-This method mutates `layers`.
-
-`LayerCache` is a helper struct, defined in "layer.cpp", that contains a pre-activation and post-activation vector.
-
-**Parameters**
-
-* `layers` (`vector<Layer>&`): Vector of layers to optimize.
-* `initial_input` (`const Eigen::VectorXd&`): Input originally provided to the network.
-* `intermediate_outputs` (`const vector<LayerCache>&`): Outputs from each layer before and after activation.
-* `predictions` (`const Eigen::VectorXd&`): Final output of the network for `initial_input`.
-* `actuals` (`const Eigen::VectorXd&`): Target output corresponding to `initial_input`.
-* `loss_calculator` (`const std::shared_ptr<LossCalculator>`): Smart pointer to the loss calculator used for computing gradients.
+[Back to table of contents](#table-of-contents)

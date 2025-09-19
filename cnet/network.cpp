@@ -82,7 +82,7 @@ shared_ptr<LossCalculator> loss_calculator;
 /**
  * Smart pointer to object that improves the model's weights
  */
-shared_ptr<Optimizer> optimizer;
+shared_ptr<Optimizer> optim;
 
 
 
@@ -92,7 +92,7 @@ public:
 /**
  * Creates an empty network.
  * 
- * The created network is not enabled. It has no layers, loss calculator, or optimizer.
+ * The new network is not enabled. It has no layers, loss calculator, or optimizer.
  */
 Network() {
     enabled = false;
@@ -182,6 +182,17 @@ Layer layer_at(string layer_name) {
  */
 int layer_count() const {
     return layers.size();
+}
+
+
+
+/**
+ * @return smart pointer to the network's optimizer object
+ * 
+ * The returned pointer can be used to directly change the network's optimizer.
+ */
+shared_ptr<Optimizer> optimizer() {
+    return optim;
 }
 
 
@@ -317,7 +328,7 @@ void enable() {
     }
 
     //Ensure there is an optimizer
-    if(!optimizer) {
+    if(!optim) {
         throw illegal_state("Enable check failed- The network must have an optimizer to begin training");
     }
 
@@ -338,7 +349,7 @@ void enable() {
     //Check passed: Initialize input vector and reset intermediate outputs
     initial_input = VectorXd(layers[0].input_dimension());
     intermediate_outputs.clear();
-    optimizer->clear_state();
+    optim->clear_state();
     enabled = true;
 }
 
@@ -514,10 +525,24 @@ void set_optimizer(shared_ptr<Optimizer> new_optimizer) {
     }
 
     //Free any existing optimizer
-    if(optimizer) {
-        optimizer.reset();
+    if(optim) {
+        optim.reset();
     }
-    optimizer = new_optimizer;
+    optim = new_optimizer;
+}
+
+
+
+/**
+ * Sets the optimizer's hyperparameters.
+ * The purpose of each index in `hyperparameters` depends on the optimizer.
+ * 
+ * Example: For SGD optimizers, index 0 is the new learning rate, and index 1 is for the new momentum coefficient.
+ * 
+ * @param hyperparameters vector of new hyperparameters to set (exact parameters and preconditions depends on the optimizer)
+ */
+void set_optimizer_hyperparameters(const vector<double>& hyperparameters) {
+    optim->set_hyperparameters(hyperparameters);
 }
 
 
@@ -562,7 +587,7 @@ void set_weights_at(int layer_number, MatrixXd new_weights) {
  * Requires that the network is enabled. If not, the method throws `illegal_state`.
  * 
  * @param input input to the network. Must have `{networkName}.input_dimension()` rows
- * @param training true if  training the network, false if getting results for evaluation only. Default: `true`
+ * @param training true if training the network, false if getting results for evaluation only. Default: `true`
  * @return the network's output, as a VectorXd of dimension `{networkName}.output_dimension()`
  * @throws `illegal_state` if the network is not enabled
  */
@@ -614,11 +639,6 @@ VectorXd predict(const VectorXd& input) {
     assert((input.cols() == 1 && "Input to prediction must be a column vector"));
     assert((input.rows() == input_dimension() && "Input to prediction must have same dimension as the network's input"));
 
-    //Enable check
-    if(!enabled) {
-        throw illegal_state("Predict operation requires the network to be enabled");
-    }
-
     return forward(input, false);
 }
 
@@ -651,7 +671,7 @@ void reverse(const VectorXd& predictions, const VectorXd& actuals) {
     }
     
     //Use the network's optimizer
-    optimizer->step(layers, initial_input, intermediate_outputs,
+    optim->step(layers, initial_input, intermediate_outputs,
         predictions, actuals, loss_calculator);
 }
 
@@ -702,7 +722,7 @@ friend std::ostream& operator<<(std::ostream& os, const Network& network);
  */
 ~Network() {
     loss_calculator.reset();
-    optimizer.reset();
+    optim.reset();
 }
 
 };
@@ -724,8 +744,8 @@ std::ostream& operator<<(std::ostream& os, const Network& network) {
     }
 
     //optimizer
-    if(network.optimizer) {
-        os << network.optimizer->name() << " optimizer";
+    if(network.optim) {
+        os << network.optim->name() << " optimizer";
     }
     else {
         os << "no defined optimizer";
