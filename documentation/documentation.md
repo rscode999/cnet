@@ -3,7 +3,10 @@
 
 Documentation for each class and its methods.
 
+All classes and methods are in the `CNet` namespace. The only class not in `CNet` is the `illegal_state` exception, which is not in a namespace.
+
 Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).  
+
 
 [Back to README](../README.md)
 
@@ -52,7 +55,7 @@ A neural network that can be trained and used for predictions.
 
 The user adds layers, a loss calculator, and an optimizer to the network prior to use.
 
-Each layer in a network has an index number, ranging from 0 to `{networkName}.layer_count()` - 1. The first layer in a network has index 0. The second has index 1, the third has index 2, and so on.  
+Each layer in a network has a 0-based index number, ranging from 0 to `{networkName}.layer_count()` - 1. The first layer in a network has index 0. The second has index 1, the third has index 2, and so on.  
 The input layer is the first layer. The output layer is the last layer.
 
 To use a network, the network must be enabled via `{networkName}.enable()`.
@@ -64,6 +67,8 @@ Once enabled, the network cannot be edited until `{networkName}.disable()` is ca
 ### illegal_state
 
 An exception thrown only by a Network. Thrown when enable/disable rules are broken.
+
+This exception is *not* part of the `CNet` namespace.
 
 `illegal_state` is a subclass of `std::runtime_error`.
 
@@ -245,7 +250,7 @@ Adds a new layer with the given dimensions and name. The new layer has no activa
 
 To use this method, the network must be disabled.
 
-*The activation function is the identity function, f(x)=x, which does nothing.
+*The activation function is the identity function, f(x)=x, a placeholder that does nothing.
 
 **Parameters**
 
@@ -471,6 +476,8 @@ To use this method, the network must be disabled.
 Sets the optimizer's hyperparameters.
 The purpose of each index in `hyperparameters` depends on the optimizer.
 
+Throws `std::runtime_error` if the network has no defined optimizer.
+
 Example: For SGD optimizers, index 0 is the new learning rate, and index 1 is for the new momentum coefficient.
 
 See the [optimizer-specific documentation](optimizers.md) for more information about particular optimizers.
@@ -478,6 +485,10 @@ See the [optimizer-specific documentation](optimizers.md) for more information a
 **Parameters**
 
 * `hyperparameters` (`const std::vector<double>&`): Vector of new hyperparameters to set. Preconditions vary, depending on the specific optimizer used.
+
+**Exceptions**
+
+* `std::runtime_error`: If the network has no defined optimizer.
 
 ---
 
@@ -549,6 +560,8 @@ Requires that the network is enabled.
 
 Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
 
+Call this method immediately after using the `{networkName}.forward` method for best results. That way, the stored gradients from `forward` (stored inside the network) and the output from `reverse` will update network gradients properly.
+
 This method requires the network to be enabled. Also, `{networkName}.forward` with `training = true` must have been called since the network was enabled.
 If these conditions are not met, the method throws `illegal_state`.
 
@@ -611,7 +624,8 @@ The exported network, as a `std::string`, contains the Network's enabled/disable
 
 Abstract class representing an activation function, along with all functions required to perform backpropagation.
 
-Commonly used when pointed to by a `shared_ptr` smart pointer.
+Commonly used when pointed to by a `std::shared_ptr` smart pointer.  
+Example of creating a `Relu` object: `std::shared_ptr<Relu> relu = std::make_shared<Relu>();`
 
 Pre-implemented concrete subclasses:
 - `IdentityActivation` (name: "none"), a placeholder that does nothing to its input
@@ -628,6 +642,8 @@ Names are accessed using the `name` method.
 #### Default constructor
 
 All pre-implemented subclasses of `ActivationFunction` have a constructor that takes no arguments. Example: `Relu()`, `Sigmoid()`
+
+ActivationFunctions are commonly used when pointed to by a smart pointer, particularly a `std::shared_ptr`.
 
 ---
 

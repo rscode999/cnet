@@ -2,15 +2,15 @@
 
 [Back to documentation](documentation.md)
 
-Documentation for each optimizer class.
+Documentation for each optimizer class, inside the `CNet` namespace.
 
-To use an Optimizer, make a smart pointer to the object, then pass the smart pointer to the Network.  
+To use an Optimizer, make a `std::shared_ptr` to a concrete Optimizer subclass, then pass the smart pointer to the Network.  
 Example with SGD optimizer:
 ```
-shared_ptr<SGD> sgd_optim_ptr = make_shared<SGD>();
-
+std::shared_ptr<SGD> sgd_optim_ptr = std::make_shared<SGD>();
 network.set_optimizer(sgd_optim_ptr);
 ```
+Note: Only a concrete subclass of Optimizer may be created. The Optimizer is an abstract class, so directly instantiating `Optimizer` causes an error.
 
 Using an external smart pointer, an Optimizer's hyperparameters can be changed or retrieved.  
 Setting hyperparameters can also be done through the Network, with the method `set_optimizer_hyperparameters`.
@@ -19,7 +19,7 @@ Setting hyperparameters can also be done through the Network, with the method `s
 
 - [Shared Virtual Methods](#shared-virtual-methods)
 
-Concrete classes:
+Pre-implemented concrete subclasses:
 
 - [Stochastic Gradient Descent (SGD)](#sgd)
     - [Constructor](#constructor)
@@ -34,13 +34,15 @@ Concrete classes:
 
 ## Shared Virtual Methods
 
-The Optimizer is an abstract class. A user cannot directly instantiate an Optimizer; only its concrete subclasses may be created.
+The Optimizer is an abstract class. A user cannot directly instantiate an Optimizer. Only its concrete subclasses may be created.
 
-All Optimizers have shared virtual methods that can be called on any Optimizer instance.
+All Optimizers share the virtual methods below. They can be called on any Optimizer instance.
+
+---
 
 #### name
 
-*Signature*: `virtual string name()`
+*Signature*: `virtual std::string name()`
 
 Returns the optimizer's identifying string. If not overridden, returns `"optimizer"`.
 
@@ -48,9 +50,10 @@ The string returned is typically the optimizer's class name converted to lowerca
 
 **Returns**
 
-The optimizer's identifying string
+* `std::string`: The optimizer's identifying string
 
 ---
+
 
 #### set_hyperparameters
 
@@ -153,7 +156,7 @@ The information includes the optimizer's name `"sgd"`, its learning rate, and it
 
 **Returns**
 
-* `std::string`: Information about the optimizer.
+* `std::string`: String containing detailed information about the optimizer.
 
 ---
 

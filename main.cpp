@@ -2,29 +2,26 @@
 
 #include <iostream>
 
-using namespace std;
-
-const int N_INPUTS = 10;
 
 /**
- * Returns a vector of VectorXd's, of length 2^`n_bits`, where each VectorXd represents its index number in binary
+ * Returns a std::vector of Eigen::VectorXd's, of length 2^`n_bits`, where each Eigen::VectorXd represents its index number in binary
  * 
- * The most significant digit of each VectorXd is the VectorXd's highest index number.
+ * The most significant digit of each Eigen::VectorXd is the Eigen::VectorXd's highest index number.
  * 
  * The output contains every possible combination of `n_bits` 0's and 1's exactly once.
  * 
  * @param n_bits number of bits to use in the conversion 
- * @return vector of VectorXd's, serving as input to the classification problem
+ * @return std::vector of Eigen::VectorXd's, serving as input to the classification problem
  */
-vector<VectorXd> decimal_to_binary(int n_bits) {
+std::vector<Eigen::VectorXd> decimal_to_binary(int n_bits) {
     assert((n_bits>0 && "Number of inputs must be positive"));
 
-    vector<VectorXd> output;
+    std::vector<Eigen::VectorXd> output;
 
     //Create each binary number specified
     for(int decimal_number = 0; decimal_number < pow(2, n_bits); decimal_number++) {
 
-        VectorXd binary_number(n_bits);
+        Eigen::VectorXd binary_number(n_bits);
         int current = decimal_number;
 
         //get current bit, divide off the bit, repeat
@@ -42,21 +39,21 @@ vector<VectorXd> decimal_to_binary(int n_bits) {
 
 
 /**
- * Returns a vector of VectorXd's, of length 2^`n_bits`.
- * Each VectorXd is of length 1, containing a 1 if the VectorXd's index number has an even number of 1's in its binary representation, and 0 otherwise.
+ * Returns a std::vector of Eigen::VectorXd's, of length 2^`n_bits`.
+ * Each Eigen::VectorXd is of length 1, containing a 1 if the Eigen::VectorXd's index number has an even number of 1's in its binary representation, and 0 otherwise.
  * 
  * @param n_bits number of bits to use in the conversion 
- * @return vector of VectorXd's, serving as output to the classification problem
+ * @return std::vector of Eigen::VectorXd's, serving as output to the classification problem
  */
-vector<VectorXd> decimal_to_even_count(int n_bits) {
+std::vector<Eigen::VectorXd> decimal_to_even_count(int n_bits) {
     assert((n_bits>0 && "Number of inputs must be positive"));
 
-    vector<VectorXd> output;
+    std::vector<Eigen::VectorXd> output;
 
     //Create each binary number specified
     for(int decimal_number = 0; decimal_number < pow(2, n_bits); decimal_number++) {
 
-        VectorXd binary_number(1);
+        Eigen::VectorXd binary_number(1);
         int current = decimal_number;
         int ones_count = 0;
 
@@ -99,7 +96,7 @@ int main() {
     Train a neural network to the input data.
     Then print the network's output for each value in `inputs`.
 
-    The headers <iostream>, <memory>, and <vector> are provided. The Eigen and std namespaces are used.
+    The headers <iostream>, <memory>, and <std::vector> are provided. The Eigen and std namespaces are used.
     To make a shared smart pointer, use `shared_ptr {name} = make_shared<typename>(type's arguments...)`
 
     For 5 inputs, this setup gave over 90% accuracy:
@@ -114,8 +111,8 @@ int main() {
 
     const int N_INPUTS = 5;
 
-    vector<VectorXd> inputs = decimal_to_binary(N_INPUTS);
-    vector<VectorXd> expected_outputs = decimal_to_even_count(N_INPUTS);
+    std::vector<Eigen::VectorXd> inputs = decimal_to_binary(N_INPUTS);
+    std::vector<Eigen::VectorXd> expected_outputs = decimal_to_even_count(N_INPUTS);
 
     //Create, train, and evaluate your network here.
 }

@@ -1,7 +1,7 @@
 # CNet
 **C++ framework for writing neural networks**
 
-By contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
+By using, viewing, or contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
 Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
 
 Additional class and method information is in the [documentation file](documentation/documentation.md).
@@ -47,12 +47,18 @@ To use CNet in your program, include the "network.cpp" file in the "cnet" direct
 #include "cnet/network.cpp"
 ```
 
+You may want to use the CNet namespace as well:
+```
+using namespace CNet;
+```
+
 ## Quick Start Guide
 
 Ensure you have the line `#include "cnet/network.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in the cloned repo's top-level directory.
 
-To create a network, create a new Network object:
+To create a network, use the CNet namespace, then create a new Network object:
 ```
+using namespace CNet;
 Network net = Network();
 ```
 The network will have no layers, loss calculator, or optimizer. These must be added to the network.
@@ -60,7 +66,7 @@ The network will have no layers, loss calculator, or optimizer. These must be ad
 To add a layer to the network:
 ```
 //Create a ReLU activation function object, as a smart pointer
-shared_ptr<Relu> relu_activation_function_ptr = make_shared<Relu>();
+std::shared_ptr<Relu> relu_activation_function_ptr = std::make_shared<Relu>();
 
 //Add a layer with 3 inputs, 5 outputs, and ReLU activation
 net.add_layer(Layer(3, 5, relu_activation_function_ptr));
@@ -68,7 +74,7 @@ net.add_layer(Layer(3, 5, relu_activation_function_ptr));
 //Add a layer with 5 inputs, 10 outputs, and no activation
 net.add_layer(Layer(5, 10));
 
-//Add a layer with 10 inputs, 2 outputs, and no activation, without using an explicit constructor
+//Add a layer with 10 inputs, 2 outputs, and no activation, without using the Layer constructor
 net.add_layer(10, 2);
 
 //Highly recommended: free the activation function pointer
@@ -83,12 +89,12 @@ The `remove_layer` method erases a layer at a specified index.
 
 To add a loss calculator, i.e. for Mean Squared Error:
 ```
-net.set_loss_calculator(make_shared<MeanSquaredError>());
+net.set_loss_calculator(std::make_shared<MeanSquaredError>());
 ```
 
 To add an optimizer, i.e. for Stochastic Gradient Descent (SGD):
 ```
-net.set_optimizer(make_shared<SGD>());
+net.set_optimizer(std::make_shared<SGD>());
 ```
 
 Note: Both `set_loss_calculator` and `set_optimizer` use smart pointers, to enable memory-safe polymorphism.
@@ -108,7 +114,7 @@ The method checks these criteria:
 - No layer has Softmax activation, except for the final layer
 - The output dimension of each layer equals the input dimension of the next layer
 
-If any criterion is broken, the `enable` method throws the `illegal_state` exception, a subclass of `runtime_error`.  
+If any criterion is broken, the `enable` method throws the `illegal_state` exception, a subclass of `std::runtime_error`.  
 If all the criteria are met, the network can be trained, but not edited.
 
 To feed an input vector into the network:
@@ -137,7 +143,7 @@ To evaluate performance while not training:
 Eigen::VectorXd test_input(3);
 test_input << 1, 0, 1;
 
-//The following two method calls are interchangeable.
+//The following two method calls are equivalent.
 Eigen::VectorXd test_output = net.forward(test_input, false);
 Eigen::VectorXd test_output = net.predict(test_input);
 ```

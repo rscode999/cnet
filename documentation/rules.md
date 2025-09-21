@@ -2,8 +2,7 @@
 
 [Back to README](../README.md)
 
-This is a project of rules and regulations! Read this document thoroughly before
-starting work on the project!
+This is a project of rules and regulations! Read this document thoroughly before using the project!
 As a friendly reminder, failure to follow the rules means I will hunt you down and [DATA EXPUNGED].
 
 I reserve the rights to change, update, nullify, or interpret any of the rules at any time, for any reason.
@@ -157,9 +156,14 @@ The `public` and `private` markers must be at the same level of indentation as t
 
 **BEGIN CLASS FORMAT**
 
+(If applicable) A custom namespace. Anything inside the namespace should not be indented. There should be at least 4 blank lines separating the namespace title and the nearest contents.
+
 Docstring that conforms to the [Docstring Rules](#docstring-rules)   
 NOTE: Since class definitions have no inputs or return values, 
 a class docstring does not include any parameters, return values, or exceptions.
+
+Names of any friend classes, listed in alphabetical order.  
+Below should be names of any friend methods, listed in alphabetical order.
 
 Constants, whose names are in all caps, with a descriptive name.
 Must be declared in a logical order. If no logical order exists, declare in alphabetical order by variable name.  
@@ -235,14 +239,23 @@ Method overloads are ideally separated by 1-2 blank lines.
 
 Example class structure
 ```
+namespace Sample {
+
+
+
+
 /**
  * Sample class to illustrate good class organization.
  * 
  * The class can be used a finite number of times.
  * If used more than its limit, the class' error message is set
- * and the class cannot be used anymore.
+ * and any subsequent uses do nothing.
  */
 class MyClass {
+
+friend class FriendClass;
+friend class OtherFriendClass;
+friend std::string doSomething();
 
 private:
 
@@ -356,11 +369,18 @@ public:
         usage_count++;
     }
 };
+
+
+
+
+}
 ```
 
 
 ## Final Remarks
 No contributors or viewers may make references to K-Pop Demon Hunters.
+
+You agree that 3 is a good enough approximation for π and e.
 
 If you disagree with any of the rules, click [here](https://www.youtube.com/watch?v=xvFZjo5PgG0) to file a complaint.
 

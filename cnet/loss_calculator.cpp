@@ -2,8 +2,12 @@
 
 #include <Eigen/Dense>
 
-using namespace std;
-using namespace Eigen;
+
+
+namespace CNet {
+
+    
+
 
 /**
  * Abstract class for calculating loss
@@ -20,7 +24,7 @@ public:
      * @param actuals true values for model predictions
      * @return calculator's loss of the model predictions
      */
-    virtual double compute_loss(const VectorXd& predictions, const VectorXd& actuals) = 0;
+    virtual double compute_loss(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals) = 0;
 
     /**
      * Returns the gradient of the losses when measured between `predictions` and `actuals`.
@@ -31,7 +35,7 @@ public:
      * @param actuals true values for model predictions
      * @return calculator's loss gradient of the model predictions
      */
-    virtual VectorXd compute_loss_gradient(const VectorXd& predictions, const VectorXd& actuals) = 0;
+    virtual Eigen::VectorXd compute_loss_gradient(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals) = 0;
 
     /**
      * @return the identifying string of the loss calculator
@@ -40,7 +44,7 @@ public:
      * where each word is separated by an underscore.
      * Example: CrossEntropy -> `"cross_entropy"`
      */
-    virtual string name() = 0;
+    virtual std::string name() = 0;
 };
 
 
@@ -61,7 +65,7 @@ public:
 
     
     /**
-     * Returns a VectorXd containing the cross-entropy losses, 
+     * Returns a Eigen::VectorXd containing the cross-entropy losses, 
      * when measured between `predictions` and `actuals`.
      * 
      * `predictions` and `actuals` must be column vectors with the same length.
@@ -70,7 +74,7 @@ public:
      * @param actuals true values for model predictions
      * @return cross entropy calculator's loss of the model predictions
      */
-    double compute_loss(const VectorXd& predictions, const VectorXd& actuals) override {
+    double compute_loss(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actual network outputs must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Number of rows in predictions and actuals must be equal"));
@@ -79,7 +83,7 @@ public:
         constexpr double epsilon = 1e-12;
 
         // Clamp predictions to [epsilon, 1.0]
-        VectorXd clipped_preds = predictions.array().max(epsilon).min(1.0);
+        Eigen::VectorXd clipped_preds = predictions.array().max(epsilon).min(1.0);
 
         // Cross-entropy loss: -sum(actual * log(predictions))
         double loss = -(actuals.array() * clipped_preds.array().log()).sum();
@@ -97,19 +101,19 @@ public:
      * @param actuals true values for model predictions
      * @return gradient of cross-entropy calculator's loss of the model predictions
      */
-    VectorXd compute_loss_gradient(const VectorXd& predictions, const VectorXd& actuals) override {
+    Eigen::VectorXd compute_loss_gradient(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actual network outputs must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Number of rows in predictions and actuals must be equal"));
 
         // Gradient = predictions - actuals
-        return (predictions - actuals).col(0);  // Return VectorXd
+        return (predictions - actuals).col(0);  // Return Eigen::VectorXd
     }
 
     /**
      * @return `"cross_entropy"`, the identifying string for Cross Entropy loss calculators
      */
-    string name() override {
+    std::string name() override {
         return "cross_entropy";
     }
 };
@@ -141,13 +145,13 @@ public:
      * @param actuals true values for model predictions
      * @return MSE calculator's loss of the model predictions
      */
-    double compute_loss(const VectorXd& predictions, const VectorXd& actuals) override {
+    double compute_loss(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actuals must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Predictions and actuals must have the same dimension"));
 
         // Compute the MSE
-        VectorXd output = actuals - predictions;
+        Eigen::VectorXd output = actuals - predictions;
         return output.squaredNorm() / output.size();
     }
 
@@ -159,7 +163,7 @@ public:
      * @param actuals true values for model predictions
      * @return gradient of MSE calculator's loss of the model predictions
      */
-    VectorXd compute_loss_gradient(const VectorXd& predictions, const VectorXd& actuals) override {
+    Eigen::VectorXd compute_loss_gradient(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals) override {
         assert((predictions.cols() == 1 && "Predictions must be a column vector"));
         assert((actuals.cols() == 1 && "Actuals must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Predictions and actuals must have the same dimension for gradient calculation"));
@@ -171,7 +175,12 @@ public:
     /**
      * @return `"mean_squared_error"`, the identifying string for a MSE loss calculator
      */
-    string name() override {
+    std::string name() override {
         return "mean_squared_error";
     }
 };
+
+
+
+
+}

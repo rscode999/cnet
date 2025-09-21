@@ -5,6 +5,11 @@
 
 
 
+namespace CNet {
+
+
+
+
 /**
  * Abstract class for network optimizers. 
  * 
@@ -17,9 +22,9 @@ friend class Network;
 public:
 
     /**
-     * @return the optimizer's identifying string. If not overridden, returns `"optimizer"`.
+     * @return the optimizer's identifying std::string. If not overridden, returns `"optimizer"`.
      */
-    virtual string name() {
+    virtual std::string name() {
         return "optimizer";
     }
 
@@ -31,12 +36,12 @@ public:
      * 
      * @param hyperparameters vector of new hyperparameters to set (exact parameters depends on the optimizer)
      */
-    virtual void set_hyperparameters(const vector<double>& hyperparameters) = 0;
+    virtual void set_hyperparameters(const std::vector<double>& hyperparameters) = 0;
 
     /**
      * @return detailed information about the optimizer, including hyperparameters
      */
-    virtual string to_string() {
+    virtual std::string to_string() {
         return "optimizer";
     }
 
@@ -56,15 +61,15 @@ private:
      * 
      * Mutates `layers`.
      * 
-     * @param layers vector of layers to optimize
+     * @param layers std::vector of layers to optimize
      * @param initial_input value that was first given to the network
      * @param intermediate_outputs outputs of each layer before and after the layer's activation function is applied
      * @param predictions the output of the network for `initial_input`
      * @param actuals what the network should predict for `initial_input`
      * @param loss_calculator smart pointer to loss calculator object
      */
-    virtual void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
-        const VectorXd& predictions, const VectorXd& actuals, const shared_ptr<LossCalculator> loss_calculator) = 0;
+    virtual void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
+        const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) = 0;
     
 
 public:
@@ -89,12 +94,12 @@ private:
      * Private struct to store weight and bias velocities for momentum SGD
      */
     struct MomentumCache {
-        MatrixXd weight_velocity;
-        VectorXd bias_velocity;
+        Eigen::MatrixXd weight_velocity;
+        Eigen::VectorXd bias_velocity;
         
         MomentumCache(int weight_rows, int weight_cols, int bias_size) {
-            weight_velocity = MatrixXd::Zero(weight_rows, weight_cols);
-            bias_velocity = VectorXd::Zero(bias_size);
+            weight_velocity = Eigen::MatrixXd::Zero(weight_rows, weight_cols);
+            bias_velocity = Eigen::VectorXd::Zero(bias_size);
         }
     };
 
@@ -111,7 +116,7 @@ private:
     /**
      * Holds previous matrices and vectors used in backpropagation. For momentum.
      */
-    vector<MomentumCache> momentum_cache;
+    std::vector<MomentumCache> momentum_cache;
 
 
     /**
@@ -126,7 +131,7 @@ private:
      * @param loss_grad the gradient of the loss with respect to the softmax output
      * @return Jacobian from `softmax_output` * `loss_grad`
      */
-    VectorXd softmax_jacobian_vector_product(const VectorXd& softmax_out, const VectorXd& loss_grad) {
+    Eigen::VectorXd softmax_jacobian_vector_product(const Eigen::VectorXd& softmax_out, const Eigen::VectorXd& loss_grad) {
         double dot = softmax_out.dot(loss_grad);
         return softmax_out.array() * (loss_grad.array() - dot);
     }
@@ -172,7 +177,7 @@ public:
     /**
      * @return `"sgd"`, the optimizer's identifying string
      */
-    string name() override {
+    std::string name() override {
         return "sgd";
     }
 
@@ -180,7 +185,7 @@ public:
     /**
      * @return string containing the optimizer's name, its learning rate, and its momentum coefficient
      */
-    string to_string() override {
+    std::string to_string() override {
         return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff);
     }
 
@@ -194,9 +199,9 @@ public:
      * 
      * Index 0 must be positive. Index 1 must be non-negative.
      * 
-     * @param hyperparameters vector of new hyperparameters. Must be of length 2, where index 0 is positive and index 1 is non-negative
+     * @param hyperparameters std::vector of new hyperparameters. Must be of length 2, where index 0 is positive and index 1 is non-negative
      */
-    void set_hyperparameters(const vector<double>& hyperparameters) override {
+    void set_hyperparameters(const std::vector<double>& hyperparameters) override {
         assert((hyperparameters.size() == 2 && "Hyperparameter list for SGD optimizer must be of length 2"));
         assert((hyperparameters[0]>0 && "Index 0 of new SGD hyperparameters (learning rate) must be positive"));
         assert((hyperparameters[1]>=0 && "Index 1 of new SGD hyperparameters (momentum coefficient) must be non-negative"));
@@ -242,15 +247,15 @@ private:
     /**
      * Updates `layers` using SGD optimization
      * 
-     * @param layers vector of layers to optimize
+     * @param layers std::vector of layers to optimize
      * @param initial_input value that was first given to the network
      * @param intermediate_outputs outputs of each layer before and after the layer's activation function is applied
      * @param predictions the output of the network for `initial_input`
      * @param actuals what the network should predict for `initial_input`
      * @param loss_calculator smart pointer to loss calculator object
      */
-    void step(vector<Layer>& layers, const VectorXd& initial_input, const vector<LayerCache>& intermediate_outputs,
-        const VectorXd& predictions, const VectorXd& actuals, const shared_ptr<LossCalculator> loss_calculator) override {
+    void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
+        const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) override {
         //The entire network is not passed in. This allows one-way friend access
         
         assert((predictions.cols() == 1 && "Predicted values must be a column vector"));
@@ -266,14 +271,14 @@ private:
         }
 
 
-        VectorXd delta;
+        Eigen::VectorXd delta;
         auto final_activation = layers.back().activation_function();
         bool final_activation_using_softmax = final_activation->name() == "softmax";
         bool using_cross_entropy_loss = loss_calculator->name() == "cross_entropy";
 
         // Step 1: Compute dL/dy
-        VectorXd loss_grad = loss_calculator->compute_loss_gradient(predictions, actuals);
-
+        Eigen::VectorXd loss_grad = loss_calculator->compute_loss_gradient(predictions, actuals);
+ 
         // Step 2: Handle softmax Jacobian if needed
         bool activation_derivative_applied = false; //Ensures that, if softmax Jacobian is applied, it isn't applied again
         if (final_activation_using_softmax && !using_cross_entropy_loss) {
@@ -302,16 +307,16 @@ private:
         //update remaining layers
         for(int l = layers.size()-1; l >= 0; l--) {
             //Get original post-activation of the previous layer
-            VectorXd previous_post_activation = (l > 0) 
+            Eigen::VectorXd previous_post_activation = (l > 0) 
                 ? intermediate_outputs[l-1].post_activation
                 : initial_input;
 
             //propagate delta
-            VectorXd new_delta;
+            Eigen::VectorXd new_delta;
             if(l > 0) {
-                MatrixXd current_weights = layers[l].weight_matrix();
+                Eigen::MatrixXd current_weights = layers[l].weight_matrix();
 
-                VectorXd current_intermediate_output = layers[l-1].activation_function()->using_pre_activation()
+                Eigen::VectorXd current_intermediate_output = layers[l-1].activation_function()->using_pre_activation()
                     ? intermediate_outputs[l-1].pre_activation
                     : intermediate_outputs[l-1].post_activation;
                 
@@ -323,19 +328,17 @@ private:
                 update new delta with product of current weights and previous intermediate output 
                 (with activation deriv. applied to each element)
                 */
-                new_delta = (current_weights.transpose() * delta).cwiseProduct(
-                    current_intermediate_output
-                );
+                new_delta = (current_weights.transpose() * delta).cwiseProduct(current_intermediate_output);
             }
-            
+                
             //weight gradient = outer product of delta and previous layer's post activation outputs
-            MatrixXd weight_grad = delta * previous_post_activation.transpose();
+            Eigen::MatrixXd weight_grad = delta * previous_post_activation.transpose();
             //bias gradient = delta as itself
-            VectorXd bias_grad   = delta;
+            Eigen::VectorXd bias_grad   = delta;
 
             //get current momentums for weights and biases
-            MatrixXd& weight_velocity = momentum_cache[l].weight_velocity;
-            VectorXd& bias_velocity   = momentum_cache[l].bias_velocity;
+            Eigen::MatrixXd& weight_velocity = momentum_cache[l].weight_velocity;
+            Eigen::VectorXd& bias_velocity   = momentum_cache[l].bias_velocity;
 
             //update weight
             weight_velocity = momentum_coeff * weight_velocity + learn_rate * weight_grad;
@@ -353,3 +356,8 @@ private:
     }
 
 };
+
+
+
+
+}
