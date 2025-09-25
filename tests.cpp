@@ -259,7 +259,7 @@ void test_training_binconvert() {
 
     Network net = Network();
 
-    shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9);
+    shared_ptr<BatchSGD> optimizer = make_shared<BatchSGD>(0.005, 0.9, 4); //Change to SGD or BatchSGD as needed.
     net.set_optimizer(optimizer);
     optimizer.reset();
 
@@ -559,5 +559,5 @@ void test_hot_swap() {
 
 int main() {
     //Call testing functions as you wish.
-    test_hot_swap();
+    test_training_binconvert();
 }
