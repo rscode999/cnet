@@ -519,7 +519,7 @@ To use this method, the network must be disabled.
 
 Returns the output of the network for a given input.
 
-If `training` is true, intermediate outputs are stored for backpropagation, allowing `{networkName}.reverse` to be called.
+If `training` is true, intermediate outputs are stored for backpropagation, allowing `{networkName}.reverse` to be called. Otherwise, the network does not store intermediate outputs, saving memory and computation time.
 
 **Returns**
 
@@ -538,7 +538,7 @@ If `training` is true, intermediate outputs are stored for backpropagation, allo
 
 Returns the predictions for the given input.
 
-When this method is used, the network *does not* internally record intermediate layer outputs for backpropagation.
+When this method is used, the network *does not* internally record intermediate layer outputs for backpropagation. Saves memory and computation time.
 
 Equivalent to `{networkName}.forward(input, false)`.
 
@@ -1007,11 +1007,13 @@ Returns the identifying string of the loss calculator.
 
 Abstract class for network optimizers.
 
-A `shared_ptr` smart pointer to an `Optimizer` instance can be used by a `Network`.
+A `shared_ptr` smart pointer to an `Optimizer` instance can be used by a `Network`.  
+Example for SGD optimizer: `std::shared_ptr<SGD> optimizer = make_shared<SGD>();`
 
 Pre-implemented concrete subclasses:
 
 * `SGD`, a Stochastic Gradient Descent optimizer
+* `BatchSGD`, a Stochastic Gradient Descent optimizer that averages data over batches
 
 Further info is in the [optimizer-specific documentation](optimizers.md).
 

@@ -3,6 +3,8 @@
 
 /**
  * Thrown to indicate that the network is not in the proper state to call a method.
+ * 
+ * Subclass of `std::runtime_error`.
  */
 class illegal_state : public std::runtime_error {
 
@@ -16,6 +18,8 @@ public:
     }
 
 };
+
+
 
 
 

@@ -12,9 +12,15 @@ namespace CNet {
 
 
 /**
- * Abstract class for network optimizers. 
+ * Abstract class for network optimizers.
  * 
- * Its `clear_state` and `step` methods are private and cannot be directly used.
+ * The Optimizer's `step` method performs an optimization pass over a Network's layers.
+ * `step` is a private method that can be called only from within a Network, and is inaccessible to users.
+ * 
+ * An Optimizer's hyperparameters can be adjusted with optimizer-specific setter methods,
+ * or use the `set_hyperparameters` method.
+ * 
+ * Normally used in a Network when inside a smart pointer, specifically a `std::shared_ptr`.
  */
 class Optimizer {
 
@@ -49,7 +55,9 @@ public:
 private:
 
     /**
-     * Resets the optimizer's internal state, allowing it to handle network architecture changes.
+     * Resets the optimizer to its pre-training state.
+     * 
+     * The reset allows the Optimizer to handle network architecture changes.
      * 
      * Called internally by a Network when the Network is disabled.
      */
@@ -368,7 +376,7 @@ private:
  * This optimizer takes an additional parameter, `batch_size`, dictating the number of datapoints to average over.
  * 
  * The optimizer updates weights and biases on every `batch_size`-th input.
- * No updates occur otherwise.
+ * No updates occur on inputs other than ever `batch_size`-th input.
  */
 class BatchSGD : public SGD {
 
@@ -449,12 +457,21 @@ public:
     }
 
 
+    ////////////////////////////////////////////////////////////////////////////////////
+    //SETTERS
+
+
     /**
-     * Sets the Batch SGD's batch size to `new_batch_size`
+     * Sets the Batch SGD's batch size to `new_batch_size`.
+     * 
+     * The optimizer's current training data will be reset.
+     * 
      * @param new_batch_size new batch size. Must be positive.
      */
     void set_batch_size(int new_batch_size) {
         assert((new_batch_size>0 && "New batch size must be positive"));
+
+        clear_state();
         batch_size = new_batch_size;
     }
 
@@ -473,6 +490,10 @@ public:
         assert((hyperparameters[1]>=0 && "Batch SGD hyperparameter index 1 (new momentum coefficient) must be positive"));
         assert(((int)hyperparameters[2]>0 && "Batch SGD hyperparameter index 2 (new batch size), as an integer, must be positive"));
 
+        if(batch_size != (int)hyperparameters[2]) {
+            clear_state();
+        }
+
         learn_rate = hyperparameters[0];
         momentum_coeff = hyperparameters[1];
         batch_size = (int)hyperparameters[2];
@@ -485,7 +506,9 @@ private:
     //METHODS (PRIVATE)
 
     /**
-     * Resets the optimizer to its pre-training state
+     * Resets the optimizer to its pre-training state.
+     * 
+     * Resets biases, weights, momentum data, and number of samples trained.
      */
     void clear_state() override {
         total_biases.clear();
