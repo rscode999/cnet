@@ -12,8 +12,9 @@ namespace CNet {
     
 /**
  * Holds an activation function, along with all information required to do backpropagation with it.
- * 
  * Abstract class.
+ * 
+ * All concrete implementations have no internal state.
  */
 class ActivationFunction {
 public:
@@ -126,7 +127,7 @@ public:
      */
     Eigen::VectorXd compute(const Eigen::VectorXd& input) override {
         return input.unaryExpr([](double x) {
-                return (x<0) ? 0 : x;
+                return (x<0) ? 0.0 : x;
             }
         );
     }
@@ -218,9 +219,6 @@ public:
  * The only layer allowed to use Softmax is the output layer.
  */
 class Softmax : public ActivationFunction {
-
-private:
-
 public:
     /**
      * Creates a new Softmax object
@@ -230,7 +228,7 @@ public:
 
 
     /**
-     * Softmax over the entire vector
+     * @return Softmax computed element-wise over the entire vector
      */
     Eigen::VectorXd compute(const Eigen::VectorXd& input) override {
         Eigen::VectorXd shifted = input.array() - input.maxCoeff();  // for numerical stability

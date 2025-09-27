@@ -36,6 +36,9 @@ Directory structure should be as follows:
 your-repo-name
 ├── cnet/
 ├── <EIGEN FOLDER GOES HERE>/
+├── main.cpp
+├── tests.cpp
+├── README.md
 ...
 ```
 
@@ -56,12 +59,14 @@ using namespace CNet;
 
 Ensure you have the line `#include "cnet/network.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in the cloned repo's top-level directory.
 
-To create a network, use the CNet namespace, then create a new Network object:
+To create a network, use the CNet namespace,* then create a new Network object:
 ```
 using namespace CNet;
 Network net = Network();
 ```
-The network will have no layers, loss calculator, or optimizer. These must be added to the network.
+*If you don't use the CNet namespace, prefix all CNet objects with `CNet::`.  
+
+The network will have no layers, loss calculator, or optimizer. These must be added to the network.  
 
 To add a layer to the network:
 ```
@@ -94,10 +99,24 @@ net.set_loss_calculator(std::make_shared<MeanSquaredError>());
 
 To add an optimizer, i.e. for Stochastic Gradient Descent (SGD):
 ```
-net.set_optimizer(std::make_shared<SGD>());
+shared_ptr<SGD> optimizer_ptr = std::make_shared<SGD>()
+net.set_optimizer(optimizer_ptr);
 ```
 
 Note: Both `set_loss_calculator` and `set_optimizer` use smart pointers, to enable memory-safe polymorphism.
+
+
+To adjust the optimizer's hyperparameters, use the optimizer's methods (provided you didn't reset the optimizer's smart pointer):
+```
+//Set learning rate to 0.005, and momentum coefficient to 0.9
+optimizer_ptr->set_learning_rate(0.005);
+optimizer_ptr->set_momentum_coefficient(0.9);
+```
+Or, make the changes through the Network:
+```
+//Set learning rate to 0.005, and momentum coefficient to 0.9
+net.set_optimizer_hyperparameters(std::vector<double>{0.005, 0.9});
+```
 
 To check the network's configuration, feed the network directly to the standard output stream:
 ```
@@ -115,7 +134,7 @@ The method checks these criteria:
 - The output dimension of each layer equals the input dimension of the next layer
 
 If any criterion is broken, the `enable` method throws the `illegal_state` exception, a subclass of `std::runtime_error`.  
-If all the criteria are met, the network can be trained, but not edited.
+If all the criteria are met, the network's attributes cannot be changed. Attributes can still be retrieved.
 
 To feed an input vector into the network:
 ```
@@ -133,11 +152,11 @@ To compute the reverse process, carrying out backpropagation using the network's
 Eigen::VectorXd expected_output(2);
 input << 1, 1;
 
-//Initiate backpropagation
+//Initiate an optimization step
 net.reverse(predictions, expected_output);
 ```
 
-To evaluate performance while not training:
+To evaluate performance without training:
 ```
 //Make 3D vector [1, 0, 1]
 Eigen::VectorXd test_input(3);
@@ -159,14 +178,13 @@ Add layers, remove layers, change weight/bias matrices...
 //Re-enables the network for continued training
 net.enable();
 ```
-While enabled, a network's attributes cannot be changed. Attributes can still be retrieved.
-
 
 To compile the network, use the provided Makefile if your have GnuMake installed:
 ```
 make c
 ```
-You may need to change the Makefile variables `MAIN`, `OUTPUT_EXECUTABLE_NAME`, and `EIGEN_DIRECTORY_PATH` to where you put your main function, the desired executable filename, and the name of your Eigen 3 folder.
+You may need to change the Makefile variables `MAIN`, `OUTPUT_EXECUTABLE_NAME`, and `EIGEN_DIRECTORY_PATH` to where you put your main function, the desired executable filename, and the name of your Eigen 3 folder.  
+As of now, the cpiled
 
 If you don't have GnuMake and you have the G++ compiler installed, this command should compile your executable. Replace "main.cpp" with your main function's filename and "cnet" with your desired executable's name.
 Ensure {name of Eigen 3 folder} is replaced with the actual folder's name:
@@ -175,6 +193,11 @@ g++ main.cpp  -o cnet  -std=c++14  -I {name of Eigen 3 folder}
 ```
 
 If you don't have G++, refer to your compiler's documentation on how to include external directories and use the C++14 standard (or later).
+
+Note: Changes will be rejected if code produces any compiler warnings are produced (including hidden warnings), fails under high optimization, or doesn't strictly follow the C++14 standard. Compile with Optimization-2, All, Error, and Pedantic options for best results:
+```
+g++ main.cpp  -o cnet  -std=c++14  -I {name of Eigen 3 folder} -O2 -Wall -Werror -Wpedantic
+```
 
 ## File Structure
 
@@ -189,4 +212,7 @@ There are 5 main components:
 
 For more details on what each method does, consult the [documentation](documentation/documentation.md).
 
-The top-level directory contains the Makefile and `main.cpp`, which contains functions for testing.
+The top-level directory contains:
+- `main.cpp`, for users to write their code
+- `tests.cpp`, containing pre-built tests of network functionality
+- The project Makefile

@@ -371,7 +371,7 @@ private:
 
 
 /**
- * A Stochastic Gradient Descent (SGD) optimizer that trains in batches.
+ * A Stochastic Gradient Descent (SGD) optimizer that trains in batches. Subclass of `SGD`.
  * 
  * This optimizer takes an additional parameter, `batch_size`, dictating the number of datapoints to average over.
  * 

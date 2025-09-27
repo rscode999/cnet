@@ -588,6 +588,13 @@ If the network is enabled, this method throws `illegal_state`.
 
 Equivalent to `{networkName}.add_layer(new_layer)`.
 
+Usage Example
+```
+CNet::Network net;
+CNet::Layer new_layer = Layer(3, 5);
+net += new_layer;
+```
+
 **Parameters**
 
 * `new_layer` (`Layer`): Layer to add to the back of the network.
@@ -605,6 +612,12 @@ Equivalent to `{networkName}.add_layer(new_layer)`.
 Exports `network` to the output stream `os`, returning a reference to `os` with `network` added.
 
 The exported network, as a `std::string`, contains the Network's enabled/disabled status, loss calculator, optimizer, and layers.
+
+Usage Example
+```
+CNet::Network net;
+std::cout << net;
+```
 
 **Returns**
 
@@ -910,6 +923,12 @@ Applies weights and adds biases.
 *Signature:* `friend std::ostream& operator<<(std::ostream& os, const Layer& layer)`
 
 Exports `layer` to the output stream `os`, returning a new output stream with `layer` inside.
+
+Usage Example
+```
+CNet::Layer layer = Layer(3, 5);
+std::cout << layer;
+```
 
 **Returns**
 

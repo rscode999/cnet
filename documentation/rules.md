@@ -13,6 +13,7 @@ I reserve the rights to change, update, nullify, or interpret any of the rules a
 - [Inheritance Rules](#inheritance-rules)
 - [Naming Rules](#naming-rules)
 - [Class Structure Rules](#class-structure-rules)
+- [Compilation Rules](#compilation-rules)
 - [Final Remarks](#final-remarks)
 
 
@@ -90,12 +91,13 @@ OK- `void method(const Object& obj)`
 OK- `void method(Object obj)`  
 NOT OK, unless specified- `void method(Object& obj)`
 
+Methods must return deep copies of objects. Returning a reference to an object is not allowed.
 
 All methods must assert their preconditions. Descriptive messages should be used in assertions.  
 Example:  
 `assert((index>=0 && "Index cannot be negative"));`
 
-Any method that takes a pointer type must use smart pointers only. Raw pointers as method parameters are not allowed.  
+Any method that takes or returns a pointer type must use smart pointers only. Raw pointers as method parameters or return values are not allowed.  
 This rule applies to getters and setters, so any internal pointers must either be smart pointers or be inaccessible to outside users.
 
 ## Inheritance Rules
@@ -115,31 +117,32 @@ Examples: `my_method_1`, `do_something`, `display`
 Method names must use snake case.
 
 Getter methods (methods that return the value of a private field) should be the field's name, or at least very similar to the field name.  
-If the getter accesses a field by index (an identifier of integer type) in an indexed sequence (an ordered collection of objects, whose elements are uniquely identified by index numbers), the setter name must end with "at".  
+If the getter accesses a field by index (an identifier of non-negative integer type) in an indexed sequence (an ordered collection of objects, whose elements are uniquely identified by index numbers), the setter name must end with "at".  
 Examples:  
 - `value()`, to retrieve the field `value`  
 - `sequence_element_at(int index)`, to retrieve a sequence element at index `index`
 
 Setter methods (methods that change the value of a private field) should start with the word "set".  
 If the setter appends a field to the end of a sequence, the setter name may start with "add".  
-If the setter accesses a field by index (an identifier of integer type) in an indexed sequence (an ordered collection of objects, whose elements are uniquely identified by index numbers), the setter name must end with "at".  
+If the setter accesses a field by index (an identifier of integer type) in an indexed sequence (an ordered collection of objects, whose elements are uniquely identified by index numbers), the setter name must end with "at". The index number must be the first parameter.   
 Examples:  
 - `set_value(Value new_value)`, to change the private field `value`  
 - `add_element(Element new_element)`, to append `new_element` to the end of an indexed sequence
 - `set_element_at(int index, Element new_element)`, to change the element at `index` to `new_element` in an indexed sequence  
 
 
-Class names and method parameter names should use no abbreviations. Example: Choose `update_parameters(const Object& object)` instead of `update_params(const Object& obj)`.  
+Class names and method parameter names should use no abbreviations.  
+Example: Choose `update_parameters(const Object& object)` instead of `update_params(const Object& obj)`.  
 You may use abbreviations if the full name will make the class unwieldy or confusing.
 
-In case of naming conflicts between parameters and class fields, the class field should take the less verbose name.
+In case of naming conflicts between parameters, method names, and class fields, the class field should take the abbreviated or less verbose name.
 
 
 
 
 ## Class Structure Rules
 
-Classes must match the template below.  
+Classes must match the template starting at the words "BEGIN CLASS FORMAT".
 
 There are lines of comments separating the different sections. The lines should appear in the class definition.
 The number of comment lines may vary. Longer classes should have more comment lines separating each section.  
@@ -156,7 +159,7 @@ The `public` and `private` markers must be at the same level of indentation as t
 
 **BEGIN CLASS FORMAT**
 
-(If applicable) A custom namespace. Anything inside the namespace should not be indented. There should be at least 4 blank lines separating the namespace title and the nearest contents.
+(if applicable) A custom namespace. Anything inside the namespace should not be indented. There should be at least 4 blank lines separating the namespace title and the nearest contents.
 
 Docstring that conforms to the [Docstring Rules](#docstring-rules)   
 NOTE: Since class definitions have no inputs or return values, 
@@ -213,6 +216,9 @@ Getter methods (methods that retrieve a private field), in alphabetical order by
 
 Setter methods (methods that change the value of a private field), in alphabetical order by method name
 
+If a method is overloaded, the method that takes the least parameters should be first. In case of a tie, the method that takes compound objects (as opposed to primitive types) should go last. If there is still a tie, the method author may decide the order.  
+Method overloads are ideally separated by 1-2 blank lines.
+
 
 //////////////////////////////////////////////////////////////  
 //METHODS (alternative title: ADDITIONAL METHODS)
@@ -222,17 +228,26 @@ All additional methods should be in alphabetical order by the method's name.
 
 Private helper methods for a single method may go immediately above the parent method.
 They may break the alphabetical order rule.  
-These methods must have a message in their docstrings that says "Helper to {parent method name}"
+Private helpers must have a message in their docstrings that says "Helper to {parent method name}"
 
 All methods must be separated by 2 or 3 blank lines.    
 Whether to separate by 2 or 3 blank lines is the writer's choice,
 unless the class has more than 10 methods (here, the constructor counts as a method). If so, 
 methods must be separated by 3 blank lines.  
-Getters and setters of the same field, methods for unit tests, or overloads of the same method
-may be separated by 1 or 2 blank lines.
 
 If a method is overloaded, the method that takes the least parameters should be first. In case of a tie, the method that takes compound objects (as opposed to primitive types) should go last. If there is still a tie, the method author may decide the order.  
 Method overloads are ideally separated by 1-2 blank lines.
+
+
+//////////////////////////////////////////////////////////////  
+//OPERATOR OVERLOADS
+
+Methods that overload an operator. These may be in any order.
+
+<br>
+<br>
+
+The closing bracket of a namespace should be separated from the rest of the class by at least 4 blank lines.
 
 **END CLASS FORMAT**
 
@@ -368,6 +383,19 @@ public:
 
         usage_count++;
     }
+
+
+    ////////////////////////////////////////////////////////////
+    //OPERATOR OVERLOADS
+
+    /**
+    * Uses the object.
+    *
+    * Equivalent to `{objectName}.use()`.
+    */
+    void operator++() {
+        use();
+    }
 };
 
 
@@ -377,10 +405,20 @@ public:
 ```
 
 
+## Compilation Rules
+
+Effective 2025-09-27, code must compile under the following settings:
+- High optimization (G++: `-O2` or `-O3`)
+- All warnings and errors must be tracked, including warnings that are normally hidden (G++: `-Wall`)
+- Warnings must be treated as errors (G++: `-Werror`)
+- Code must strictly conform to the C++14 standard (G++: `-Wpedantic`)
+
+If, under these settings, the code does not compile, the offending changes must be rejected.
+
 ## Final Remarks
 No contributors or viewers may make references to K-Pop Demon Hunters.
 
-You agree that 3 is a good enough approximation for π and e.
+You agree that 3 is a good enough approximation for π (circumference of a circle divided by the circle's diameter) and e (Euler's number).
 
 If you disagree with any of the rules, click [here](https://www.youtube.com/watch?v=xvFZjo5PgG0) to file a complaint.
 

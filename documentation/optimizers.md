@@ -213,7 +213,7 @@ Sets the optimizer's momentum coefficient to `new_momentum_coefficient`.
 Subclass of the `SGD` optimizer. Capable of training with multiple examples at a time.
 
 A `BatchSGD` optimizer has a preset batch size, `batch_size`, given at the optimizer's construction. The optimizer updates weights and biases on every `batch_size`-th input.  
-No updates occur on inputs other than ever `batch_size`-th input.
+No updates occur on inputs other than every `batch_size`-th input.
 
 ---
 
@@ -223,7 +223,7 @@ No updates occur on inputs other than ever `batch_size`-th input.
 
 *Signature*: `BatchSGD(double learning_rate = 0.01, double momentum_coefficient = 0, int batch_size = 1)`
 
-Constructs a new Batch SGD optimizer using the specified hyperparameters.
+Constructs a new Batch SGD optimizer using the given hyperparameters.
 
 **Parameters**
 
