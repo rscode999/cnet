@@ -489,7 +489,7 @@ public:
         assert((new_biases.cols() == 1 && "New biases must be a column std::vector"));
 
         if(enabled) {
-            throw illegal_state("Cannot manually set bias std::vectors while the network is enabled");
+            throw illegal_state("Cannot manually set bias vectors while the network is enabled");
         }
 
         layers[layer_number].set_bias_vector(new_biases);

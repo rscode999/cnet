@@ -99,7 +99,7 @@ net.set_loss_calculator(std::make_shared<MeanSquaredError>());
 
 To add an optimizer, i.e. for Stochastic Gradient Descent (SGD):
 ```
-shared_ptr<SGD> optimizer_ptr = std::make_shared<SGD>()
+std::shared_ptr<SGD> optimizer_ptr = std::make_shared<SGD>()
 net.set_optimizer(optimizer_ptr);
 ```
 
@@ -184,35 +184,56 @@ To compile the network, use the provided Makefile if your have GnuMake installed
 make c
 ```
 You may need to change the Makefile variables `MAIN`, `OUTPUT_EXECUTABLE_NAME`, and `EIGEN_DIRECTORY_PATH` to where you put your main function, the desired executable filename, and the name of your Eigen 3 folder.  
-As of now, the cpiled
+By default, `OUTPUT_EXECUTABLE_NAME` is set to "a".
 
 If you don't have GnuMake and you have the G++ compiler installed, this command should compile your executable. Replace "main.cpp" with your main function's filename and "cnet" with your desired executable's name.
 Ensure {name of Eigen 3 folder} is replaced with the actual folder's name:
 ```
-g++ main.cpp  -o cnet  -std=c++14  -I {name of Eigen 3 folder}
-```
-
-If you don't have G++, refer to your compiler's documentation on how to include external directories and use the C++14 standard (or later).
-
-Note: Changes will be rejected if code produces any compiler warnings are produced (including hidden warnings), fails under high optimization, or doesn't strictly follow the C++14 standard. Compile with Optimization-2, All, Error, and Pedantic options for best results:
-```
 g++ main.cpp  -o cnet  -std=c++14  -I {name of Eigen 3 folder} -O2 -Wall -Werror -Wpedantic
+```
+
+
+## Detailed Compilation Instructions
+
+If you have GnuMake installed, use the provided [Makefile](Makefile). There are 3 variables: `MAIN` (path to a file containing the `main` function), `OUTPUT_EXECUTABLE_NAME` (name of the output program), and `EIGEN_DIRECTORY_PATH` (path to your Eigen 3 directory, relative to the Makefile).  
+Change the variables to your main function file, output program name, and path to your Eigen directory.
+
+The Makefile offers 3 compilation options:
+- `c`, for standard compiles with level 2 optimization
+- `debug`, for level 0 optimization. Works best with debuggers.
+- `optimized`, for level 3 optimization. Use for maximum speed.
+
+If you do not have GnuMake installed, compile your program with the following settings:
+- C++14 standard or later
+- All warnings, including hidden warnings, are emitted
+- Warnings are treated as errors
+- Forces strict adherence to the C++ standard
+- Moderate to aggressive optimization (if not using a debugger)
+- Compiler is instructed to look for header files in your Eigen 3 installation directory
+
+For the G++ compiler, the following command will compile `main.cpp` to an executable called `cnet`, with the Eigen 3 installation in the directory `eigen`:
+```
+g++ main.cpp  -o cnet -std=c++14  -I  eigen/ -O2 -Wall -Werror -Wpedantic
 ```
 
 ## File Structure
 
 All source code component files are found in the "cnet" folder.
 
-There are 5 main components:
+Inside "cnet", there are 5 main components:
 - `activation_function.cpp`- contains the ActivationFunction class and its subclasses. Smart pointers to ActivationFunctions compute activation functions and their derivatives for layers.
 - `layer.cpp`- contains the Layer class, a linear layer of a network. The file also contains activation functions and their derivatives.
 - `loss_calculator.cpp`- contains the LossCalculator, which computes output losses and loss gradients for model optimization
 - `optimizer.cpp`- contains the Optimizer, for improving model weights given losses and a LossCalculator
 - `network.cpp`- contains the Network class, which contains all the other components
 
-For more details on what each method does, consult the [documentation](documentation/documentation.md).
+For more details on what each class does, consult the [documentation](documentation/documentation.md).
 
-The top-level directory contains:
+Other than "cnet", the top-level directory contains:
+- Your Eigen 3 installation, if your configured your repo correctly
+- `documentation/`, a directory containing detailed class and method documentation
 - `main.cpp`, for users to write their code
 - `tests.cpp`, containing pre-built tests of network functionality
 - The project Makefile
+- The README
+- Miscellaneous files

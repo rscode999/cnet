@@ -170,7 +170,7 @@ void test_training_xor() {
     for(int e=1; e<=N_EPOCHS; e++) {
         double current_loss = 0;
 
-        for(int i=0; i<inputs.size(); i++) {
+        for(int i=0; i<(int)inputs.size(); i++) {
             VectorXd output = net.forward(inputs[i]);
             current_loss += loss_calc->compute_loss(output, correct_outputs[i]);
             net.reverse(output, correct_outputs[i]);
@@ -296,7 +296,7 @@ void test_training_binconvert() {
     //train
     for(int e=1; e<=N_EPOCHS; e++) {
         double current_loss = 0;
-        for(int i=0; i<inputs.size(); i++) {
+        for(int i=0; i<(int)inputs.size(); i++) {
             VectorXd current_result = net.forward(inputs[i]);
             current_loss += loss_calc->compute_loss(current_result, expected_outputs[i]);
             net.reverse(current_result, expected_outputs[i]);
@@ -362,7 +362,7 @@ void test_add_remove() {
     cout << net << endl;
 
     //Remove a layer
-    net.remove_layer(0);
+    net.remove_layer_at(0);
     net.remove_layer("hidden1");
     cout << "After layer removals:\n";
     cout << net << endl;
@@ -412,6 +412,8 @@ void test_add_remove() {
         cout << "Layer bias vector change failed- ";
         cout << e.what() << "\n" << endl;
     }
+
+    cout << "Add/remove test finished" << endl;
 }
 
 
@@ -425,7 +427,7 @@ void test_hot_swap() {
 
     const int N_INPUTS = 5; //Arbitary positive constant
     const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
-    const int N_INITIAL_EPOCHS = 20; //Positive constant
+    const int N_INITIAL_EPOCHS = 30; //Positive constant
     const int N_FINAL_EPOCHS = 500; //Positive constant, larger than `N_INITIAL_EPOCHS`
 
     Network net = Network();
@@ -465,7 +467,7 @@ void test_hot_swap() {
     //train
     for(int e=1; e<=N_INITIAL_EPOCHS; e++) {
         double current_loss = 0;
-        for(int i=0; i<inputs.size(); i++) {
+        for(int i=0; i<(int)inputs.size(); i++) {
             VectorXd current_result = net.forward(inputs[i]);
             current_loss += old_loss_calc->compute_loss(current_result, expected_outputs[i]);
             net.reverse(current_result, expected_outputs[i]);
@@ -519,7 +521,7 @@ void test_hot_swap() {
     //Retrain
     for(int e=1; e<=N_FINAL_EPOCHS; e++) {
         double current_loss = 0;
-        for(int i=0; i<inputs.size(); i++) {
+        for(int i=0; i<(int)inputs.size(); i++) {
             VectorXd current_result = net.forward(inputs[i]);
             current_loss += new_loss_calc->compute_loss(current_result, expected_outputs[i]);
             net.reverse(current_result, expected_outputs[i]);
@@ -559,5 +561,10 @@ void test_hot_swap() {
 
 int main() {
     //Call testing functions as you wish.
-    test_training_binconvert();
+    // test_xor_1layer();
+    // test_xor_2layer();
+    // test_training_xor();
+    // test_training_binconvert();
+    // test_add_remove();
+    test_hot_swap();
 }
