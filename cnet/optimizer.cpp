@@ -91,14 +91,22 @@ public:
 
 
 
+
 /**
- * A Stochastic Gradient Descent (SGD) optimizer, with adjustable learning rate and momentum coefficient
+ * A Stochastic Gradient Descent (SGD) optimizer, capable of training in batches.
+ *
+ * The optimizer has an adjustable learning rate and momentum coefficient.
+ *   
+ * The optimizer updates weights and biases on every `batch_size`-th input.
+ * No updates occur on inputs other than ever `batch_size`-th input.
  */
 class SGD : public Optimizer {
 
 friend class Network;
 
-protected:
+
+private:
+
     /**
      * Private struct to store weight and bias velocities for momentum SGD
      */
@@ -112,6 +120,12 @@ protected:
         }
     };
 
+
+    /**
+     * Number of samples to train per batch. Must be positive.
+     */
+    int batch_size;
+
     /**
      * Learning rate, dictating the optimization step size. Must be positive.
      */
@@ -121,6 +135,30 @@ protected:
      * Amount of momentum to use. Must be non-negative.
      */
     double momentum_coeff;
+
+    /**
+     * Number of samples trained so far. 
+     * 
+     * When this quantity reaches `batch_size`-1, the given layers are updated.
+     * 
+     * Must be between 0 and `batch_size`-1.
+     */
+    int n_samples_trained;
+
+    /**
+     * Holds per-layer biases accumulated over training.
+     * 
+     * Each index holds the total bias for the given layer.
+     */
+    std::list<Eigen::VectorXd> total_biases;
+
+    /**
+     * Holds per-layer weights accumulated over training.
+     * 
+     * Each index holds the total bias for the given layer.
+     */
+    std::list<Eigen::MatrixXd> total_weights;
+
 
     /**
      * Holds previous matrices and vectors used in backpropagation. For momentum.
@@ -145,276 +183,6 @@ protected:
         return softmax_out.array() * (loss_grad.array() - dot);
     }
 
-    
-public:
-
-    /**
-     * Creates a new SGD optimizer, loading it with the given hyperparameters `learning_rate` and `momentum_coefficient`.
-     * 
-     * @param learning_rate learning rate, for determining speed of convergence. Must be positive. Default 0.01
-     * @param momentum_coefficient for determining amount of momentum to use. Cannot be negative. Default 0
-     */
-    SGD(double learning_rate = 0.01, double momentum_coefficient = 0) {
-        assert((learning_rate>0 && "Learning rate must be positive"));
-        assert((momentum_coefficient>=0 && "Momentum coefficient cannot be negative"));
-        learn_rate = learning_rate;
-        momentum_coeff = momentum_coefficient;
-    }   
-
-    
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //GETTERS
-
-    
-    /**
-     * @return the SGD optimizer's learning rate
-     */
-    double learning_rate() {
-        return learn_rate;
-    }
-
-
-    /**
-     * @return the SGD optimizer's momentum coefficient
-     */
-    double momentum_coefficient() {
-        return momentum_coeff;
-    }
-
-
-    /**
-     * @return `"sgd"`, the optimizer's identifying string
-     */
-    virtual std::string name() override {
-        return "sgd";
-    }
-
-
-    /**
-     * @return string containing the optimizer's name, its learning rate, and its momentum coefficient
-     */
-    virtual std::string to_string() override {
-        return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //SETTERS
-
-    /**
-     * Sets the SGD optimizer's hyperparameters to `hyperparameters`.
-     * Index 0 contains the new learning rate. Index 1 contains the new momentum coefficient.
-     * 
-     * Index 0 must be positive. Index 1 must be non-negative.
-     * 
-     * @param hyperparameters vector of new hyperparameters. Must be of length 2, where index 0 is positive and index 1 is non-negative
-     */
-    virtual void set_hyperparameters(const std::vector<double>& hyperparameters) override {
-        assert((hyperparameters.size() == 2 && "Hyperparameter list for SGD optimizer must be of length 2"));
-        assert((hyperparameters[0]>0 && "Index 0 of new SGD hyperparameters (learning rate) must be positive"));
-        assert((hyperparameters[1]>=0 && "Index 1 of new SGD hyperparameters (momentum coefficient) must be non-negative"));
-
-        learn_rate = hyperparameters[0];
-        momentum_coeff = hyperparameters[1];
-    }
-
-
-    /**
-     * Sets the optimizer's learning rate to `new_learning_rate`.
-     * @param new_learning_rate learning rate to use. Must be positive
-     */
-    void set_learning_rate(double new_learning_rate) {
-        assert((new_learning_rate>0 && "New learning rate must be positive"));
-        learn_rate = new_learning_rate;
-    }
-
-    
-    /**
-     * Sets the optimizer's momentum coefficient to `new_momentum_coefficient`.
-     * @param new_momentum_coefficient momentum coefficient to use. Cannot be negative
-     */
-    void set_momentum_coefficient(double new_momentum_coefficient) {
-         assert((new_momentum_coefficient>=0 && "New momentum coefficient cannot be negative"));
-         momentum_coeff = new_momentum_coefficient;
-    }
-
-
-private:
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    //METHODS (PRIVATE)
-
-    /**
-     * Removes the SGD optimizer's weight and bias velocities, preparing it to handle a different network architecture.
-     */
-    virtual void clear_state() override {
-        momentum_cache.clear();
-    }
-
-
-    /**
-     * Updates `layers` using SGD optimization
-     * 
-     * @param layers std::vector of layers to optimize
-     * @param initial_input value that was first given to the network
-     * @param intermediate_outputs outputs of each layer before and after the layer's activation function is applied
-     * @param predictions the output of the network for `initial_input`
-     * @param actuals what the network should predict for `initial_input`
-     * @param loss_calculator smart pointer to loss calculator object
-     */
-    virtual void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
-        const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) override {
-        //The entire network is not passed in. This allows one-way friend access
-        
-        assert((predictions.cols() == 1 && "Predicted values must be a column vector"));
-        assert((predictions.rows() == layers.back().output_dimension() && "Predicted value vector must have dimension equal to the network's output dimension"));
-        assert((actuals.cols() == 1 && "Actual values must be a column vector"));
-        assert((actuals.rows() == layers.back().output_dimension() && "Actual value vector must have dimension equal to the network's output dimension"));
-
-        //Initialize momentums to all 0's (if not already initialized)
-        if(momentum_cache.size() == 0) {
-            for(Layer& layer : layers) {
-                momentum_cache.emplace_back(layer.output_dimension(), layer.input_dimension(), layer.output_dimension());
-            }
-        }
-
-
-        Eigen::VectorXd delta;
-        auto final_activation = layers.back().activation_function();
-        bool final_activation_using_softmax = final_activation->name() == "softmax";
-        bool using_cross_entropy_loss = loss_calculator->name() == "cross_entropy";
-
-        // Step 1: Compute dL/dy
-        Eigen::VectorXd loss_grad = loss_calculator->compute_loss_gradient(predictions, actuals);
- 
-        // Step 2: Handle softmax Jacobian if needed
-        bool activation_derivative_applied = false; //Ensures that, if softmax Jacobian is applied, it isn't applied again
-        if (final_activation_using_softmax && !using_cross_entropy_loss) {
-            // This is softmax + non-cross-entropy (e.g., MSE)
-            delta = softmax_jacobian_vector_product(predictions, loss_grad);
-            activation_derivative_applied = true;
-        } 
-        else {
-            // For cross-entropy + softmax or any other case
-            delta = loss_grad;
-        }
-
-        // Step 3: Apply activation derivative if applicable
-        if (!(final_activation_using_softmax && using_cross_entropy_loss)
-            && !activation_derivative_applied) { //Only do this step if the softmax Jacobian is not already applied
-                
-            if (final_activation->using_pre_activation()) {
-                delta = delta.cwiseProduct(final_activation->compute_derivative(intermediate_outputs.back().pre_activation));
-            } 
-            else {
-                delta = delta.cwiseProduct(final_activation->compute_derivative(intermediate_outputs.back().post_activation));
-            }
-        }
-                
-   
-        //update remaining layers
-        for(int l = layers.size()-1; l >= 0; l--) {
-            //Get original post-activation of the previous layer
-            Eigen::VectorXd previous_post_activation = (l > 0) 
-                ? intermediate_outputs[l-1].post_activation
-                : initial_input;
-
-            //propagate delta
-            Eigen::VectorXd new_delta;
-            if(l > 0) {
-                Eigen::MatrixXd current_weights = layers[l].weight_matrix();
-
-                Eigen::VectorXd current_intermediate_output = layers[l-1].activation_function()->using_pre_activation()
-                    ? intermediate_outputs[l-1].pre_activation
-                    : intermediate_outputs[l-1].post_activation;
-                
-                //apply previous layer's activation function derivative to each intermediate output element
-                current_intermediate_output = layers[l-1].activation_function()->compute_derivative(current_intermediate_output);
-
-                /*
-                do backpropagation
-                update new delta with product of current weights and previous intermediate output 
-                (with activation deriv. applied to each element)
-                */
-                new_delta = (current_weights.transpose() * delta).cwiseProduct(current_intermediate_output);
-            }
-                
-            //weight gradient = outer product of delta and previous layer's post activation outputs
-            Eigen::MatrixXd weight_grad = delta * previous_post_activation.transpose();
-            //bias gradient = delta as itself
-            Eigen::VectorXd bias_grad   = delta;
-
-            //get current momentums for weights and biases
-            Eigen::MatrixXd& weight_velocity = momentum_cache[l].weight_velocity;
-            Eigen::VectorXd& bias_velocity   = momentum_cache[l].bias_velocity;
-
-            //update weight
-            weight_velocity = momentum_coeff * weight_velocity + learn_rate * weight_grad;
-            bias_velocity   = momentum_coeff * bias_velocity + learn_rate * bias_grad;
-
-            //update layer weights
-            layers[l].set_weight_matrix(layers[l].weight_matrix() - weight_velocity);
-            layers[l].set_bias_vector((layers[l].bias_vector() - bias_velocity).eval());
-            
-            //update delta
-            if(l > 0) {
-                delta = new_delta;
-            }
-        }
-    }
-
-};
-
-
-
-
-
-/**
- * A Stochastic Gradient Descent (SGD) optimizer that trains in batches. Subclass of `SGD`.
- * 
- * This optimizer takes an additional parameter, `batch_size`, dictating the number of datapoints to average over.
- * 
- * The optimizer updates weights and biases on every `batch_size`-th input.
- * No updates occur on inputs other than ever `batch_size`-th input.
- */
-class BatchSGD : public SGD {
-
-friend class Network;
-
-
-private:
-
-    /**
-     * Number of samples to train per batch. Must be positive.
-     */
-    int batch_size;
-
-    /**
-     * Number of samples trained so far. 
-     * 
-     * When this quantity reaches `batch_size`-1, the given layers are updated.
-     * 
-     * Must be between 0 and `batch_size`-1.
-     */
-    int n_samples_trained;
-
-
-    /**
-     * Holds per-layer biases accumulated over training.
-     * 
-     * Each index holds the total bias for the given layer.
-     */
-    std::list<Eigen::VectorXd> total_biases;
-
-    /**
-     * Holds per-layer weights accumulated over training.
-     * 
-     * Each index holds the total bias for the given layer.
-     */
-    std::list<Eigen::MatrixXd> total_weights;
-
-
 public:
 
 
@@ -422,15 +190,19 @@ public:
     //CONSTRUCTOR
 
     /**
-     * Creates a new batch-training SGD optimizer, loading it with the given hyperparameters `learning_rate`, `momentum_coefficient`, and `batch_size`.
+     * Creates a new SGD optimizer, loading it with the given hyperparameters `learning_rate`, `momentum_coefficient`, and `batch_size`.
      * 
      * @param learning_rate learning rate, for determining speed of convergence. Must be positive. Default 0.01
      * @param momentum_coefficient for determining amount of momentum to use. Cannot be negative. Default 0
      * @param batch_size number of datapoints to use in one batch. Must be positive. Default 1
      */
-    BatchSGD(double learning_rate = 0.01, double momentum_coefficient = 0, int batch_size = 1) : SGD(learning_rate, momentum_coefficient) {
+    SGD(double learning_rate = 0.01, double momentum_coefficient = 0, int batch_size = 1) {
+        assert((learning_rate>0 && "Learning rate must be positive"));
+        assert((momentum_coefficient>=0 && "Momentum coefficient cannot be negative"));
         assert((batch_size>0 && "Batch size must be positive"));
         
+        learn_rate = learning_rate;
+        momentum_coeff = momentum_coefficient;
         this->batch_size = batch_size;
         n_samples_trained = 0;
     }
@@ -441,10 +213,10 @@ public:
     //GETTERS
     
     /**
-     * @return `"batch_sgd"`, the optimizer's identifying string
+     * @return `"sgd"`, the optimizer's identifying string
      */
     std::string name() override {
-        return "batch_sgd";
+        return "sgd";
     }
 
 
@@ -452,7 +224,7 @@ public:
      * @return string containing the optimizer's name, learning rate, momentum coefficient, and batch size
      */
     std::string to_string() override {
-        return "batch_sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff) 
+        return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff) 
             + ", batch size=" + std::to_string(batch_size);
     }
 
@@ -462,7 +234,7 @@ public:
 
 
     /**
-     * Sets the Batch SGD's batch size to `new_batch_size`.
+     * Sets the SGD's batch size to `new_batch_size`.
      * 
      * The optimizer's current training data will be reset.
      * 
@@ -477,7 +249,7 @@ public:
 
 
     /**
-     * Sets the Batch SGD optimizer's hyperparameters to `hyperparameters`.
+     * Sets the SGD optimizer's hyperparameters to `hyperparameters`.
      * Index 0 contains the new learning rate. Index 1 contains the new momentum coefficient. Index 2 contains the new batch size.
      * 
      * Index 0 must be positive. Index 1 must be non-negative. Index 2 must be positive.
@@ -485,10 +257,10 @@ public:
      * @param hyperparameters vector of new hyperparameters. Must be of length 3, where index 0 is positive, index 1 is non-negative, and index 2 is positive
      */
     void set_hyperparameters(const std::vector<double>& hyperparameters) override {
-        assert((hyperparameters.size() == 3 && "Batch SGD optimizer hyperparameter list must be of length 3"));
-        assert((hyperparameters[0]>0 && "Batch SGD hyperparameter index 0 (new learning rate) must be positive"));
-        assert((hyperparameters[1]>=0 && "Batch SGD hyperparameter index 1 (new momentum coefficient) must be positive"));
-        assert(((int)hyperparameters[2]>0 && "Batch SGD hyperparameter index 2 (new batch size), as an integer, must be positive"));
+        assert((hyperparameters.size() == 3 && "SGD optimizer hyperparameter list must be of length 3"));
+        assert((hyperparameters[0]>0 && "SGD hyperparameter index 0 (new learning rate) must be positive"));
+        assert((hyperparameters[1]>=0 && "SGD hyperparameter index 1 (new momentum coefficient) must be positive"));
+        assert(((int)hyperparameters[2]>0 && "SGD hyperparameter index 2 (new batch size), as an integer, must be positive"));
 
         if(batch_size != (int)hyperparameters[2]) {
             clear_state();
@@ -519,7 +291,7 @@ private:
 
 
     /**
-     * Updates `layers` using batch SGD optimization
+     * Updates `layers` using SGD optimization
      * 
      * @param layers std::vector of layers to optimize
      * @param initial_input value that was first given to the network

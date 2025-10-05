@@ -1032,7 +1032,6 @@ Example for SGD optimizer: `std::shared_ptr<SGD> optimizer = make_shared<SGD>();
 Pre-implemented concrete subclasses:
 
 * `SGD`, a Stochastic Gradient Descent optimizer
-* `BatchSGD`, a Stochastic Gradient Descent optimizer that averages data over batches
 
 Further info is in the [optimizer-specific documentation](optimizers.md).
 
