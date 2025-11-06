@@ -43,9 +43,18 @@ All Optimizers share the virtual methods below. They can be called on any Optimi
 
 *Signature*: `virtual std::string name()`
 
-Returns the optimizer's identifying string. If not overridden, returns `"optimizer"`.
+Returns the optimizer's identifying string.
 
-The string returned is typically the optimizer's class name converted to lowercase, with underscores in place of spaces.
+The string returned is typically the optimizer's class name converted to lowercase, with underscores in place of spaces.  
+Example: `SGD`'s name is `"sgd"`.
+
+<details>
+<summary>Implementation Details</summary>
+
+If not overridden, this method returns "optimizer".
+
+</details>
+<br>
 
 **Returns**
 
@@ -60,9 +69,10 @@ The string returned is typically the optimizer's class name converted to lowerca
 
 Sets the optimizer's hyperparameters. The meaning of each index in `hyperparameters` varies depending on the optimizer.
 
-Example of usage for SGD: Index 0 is the new learning rate. Index 1 is the new momentum coefficient.
+Example of usage for SGD: Index 0 is the new learning rate. Index 1 is the new momentum coefficient. Index 2 is the new batch size.
 
 Note that the preconditions on `hyperparameters`'s length, and for each of its indices, vary, depending on the optimizer.
+
 
 **Parameters**
 
@@ -77,6 +87,14 @@ Note that the preconditions on `hyperparameters`'s length, and for each of its i
 Returns a string containing detailed information about the optimizer's state.
 
 The information includes the optimizer's name, as well as the values of its hyperparameters.
+
+<details>
+<summary>Implementation Details</summary>
+
+If not overridden, this method returns "optimizer".
+
+</details>
+<br>
 
 **Returns**
 
@@ -93,7 +111,7 @@ Uses Stochastic Gradient Descent (SGD) optimization on a Network.
 The SGD optimizer has an adjustable learning rate and momentum coefficient.
 
 
-On construction, SGD optimizers are given an additional parameter, `batch_size`, allowing for batch training.  
+On construction, SGD optimizers have an additional parameter, `batch_size`, allowing for batch training.  
 The optimizer updates weights and biases on every `batch_size`-th input.  
 No updates occur on inputs other than every `batch_size`-th input.
 
@@ -146,11 +164,11 @@ Returns the momentum coefficient used by the optimizer.
 
 *Signature*: `std::string name() override`
 
-Returns `"sgd"`, the identifying string of the Batch SGD optimizer.
+Returns `"sgd"`, the identifying string of the SGD optimizer.
 
 **Returns**
 
-* `std::string`: The string `"batch_sgd"`.
+* `std::string`: The string `"sgd"`.
 
 ---
 

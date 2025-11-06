@@ -7,16 +7,16 @@ Do not push to any version branches (i.e. "v0.9.0") or "main" without my explici
 Additional class and method information is in the [documentation file](documentation/documentation.md).
 
 ## Foreword
-I ran my first neural network about 2 years ago. The network was really deep, but I didn't have a good computer, so the network took hours to train.
+I ran my first neural network in the summer of 2024. The network was really deep, but I didn't have a good computer, so the network took hours to train.
 
 Fast forward to last summer. The first neural network that I wrote entirely by myself took about 8 minutes per epoch on my laptop. A full 50-epoch training session would take 6 hours and 40 minutes, almost my entire working day.  
-I needed a way to quickly build and train networks on less powerful hardware, not just computers with the fastest GPUs and compute units.  
+I needed a way to quickly build and train networks on less powerful hardware, not just on computers with the fastest GPUs and compute units.  
 Even if speed goals are not met, I still wanted to harness the **full power of C++!!!**
 
 Although widely used, PyTorch has features that I found confusing. The most striking feature is that optimizers (or "criterions", in PyTorch language) are separate from the network. I thought that an optimizer, as part of the network, belongs inside the network instead of outside it. Another confusing feature is that PyTorch, and Tensorflow too, forces users to make custom classes to build networks instead of having pre-built network objects available.
 
 Using **the power of C++**, I created a neural network framework *from scratch* with these design goals:
-- Have the network be the central container. All network components exist inside a network object.
+- Have the network be the central container. All functionality can be accessed through the network.
 - Enable the framework to be extended using abstract classes and polymorphism
 - Use straightforward methods for network configuration
 - Implement hot-swapping capability: layers can be added, removed, or edited during training
@@ -57,7 +57,7 @@ using namespace CNet;
 
 ## Quick Start Guide
 
-Ensure you have the line `#include "cnet/network.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in the cloned repo's top-level directory.
+Ensure you have the line `#include "cnet/network.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in this repo's top-level directory.
 
 To create a network, use the CNet namespace,* then create a new Network object:
 ```
@@ -85,10 +85,9 @@ net.add_layer(10, 2);
 //Highly recommended: free the activation function pointer
 relu_activation_function_ptr.reset();
 ```
+Layers are added in sequential order. The first layer added will become the input. The last layer added is the output. 
 
-Once added to the network, each layer is assigned an index. The first layer has index 0, the second layer has index 1... and the last layer has index `{networkName}.layer_count()`-1. The index allows for editing individual layers.
-
-Layers are added in sequential order. The first layer added will become the input. The last layer added is the output.  
+Once added to the network, each layer is assigned an index. By default, the first layer added has index 0, the second layer added has index 1... and the last layer has index `{networkName}.layer_count()`-1. The index allows for editing individual layers.  
 The `insert_layer` method adds layers in positions other than the back of the network.  
 The `remove_layer` method erases a layer at a specified index.
 
@@ -108,14 +107,15 @@ Note: Both `set_loss_calculator` and `set_optimizer` use smart pointers, to enab
 
 To adjust the optimizer's hyperparameters, use the optimizer's methods (provided you didn't reset the optimizer's smart pointer):
 ```
-//Set learning rate to 0.005, and momentum coefficient to 0.9
+//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 4
 optimizer_ptr->set_learning_rate(0.005);
 optimizer_ptr->set_momentum_coefficient(0.9);
+optimizer_ptr->set_batch_size(4);
 ```
 Or, make the changes through the Network:
 ```
-//Set learning rate to 0.005, and momentum coefficient to 0.9
-net.set_optimizer_hyperparameters(std::vector<double>{0.005, 0.9});
+//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 4
+net.set_optimizer_hyperparameters(std::vector<double>{0.005, 0.9, 4});
 ```
 
 To check the network's configuration, feed the network directly to the standard output stream:
@@ -155,6 +155,8 @@ input << 1, 1;
 //Initiate an optimization step
 net.reverse(predictions, expected_output);
 ```
+
+Note: If the optimizer's batch size is greater than 1, changes are made only after `batch_size` samples are given to the `reverse` method. If less than `batch_size` samples are given, the network will not be changed.
 
 To evaluate performance without training:
 ```
@@ -207,7 +209,7 @@ If you do not have GnuMake installed, compile your program with the following se
 - C++14 standard or later
 - All warnings, including hidden warnings, are emitted
 - Warnings are treated as errors
-- Forces strict adherence to the C++ standard
+- Forces strict adherence to the C++14 standard
 - Moderate to aggressive optimization (if not using a debugger)
 - Compiler is instructed to look for header files in your Eigen 3 installation directory
 

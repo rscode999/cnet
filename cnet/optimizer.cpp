@@ -29,7 +29,7 @@ friend class Network;
 public:
 
     /**
-     * @return the optimizer's identifying std::string. If not overridden, returns `"optimizer"`.
+     * @return the optimizer's identifying std::string.
      */
     virtual std::string name() {
         return "optimizer";

@@ -85,17 +85,16 @@ VectorXd halve_to_index(const VectorXd& input, int start_index = 0) {
 
 ## Method Rules
 
-Any modification to a method's input must occur on a deep defensive copy. Passing a non-constant reference to a method is not allowed, unless otherwise specified.  
+Any modification to a method's input must occur on a deep defensive copy. Passing a non-constant reference to a method is not allowed, unless stated in documentation.  
 Examples:  
-OK- `void method(const Object& obj)`  
-OK- `void method(Object obj)`  
-NOT OK, unless specified- `void method(Object& obj)`
+OK- `void method(const Object& obj)` (constant reference)   
+OK- `void method(Object obj)` (deep copy)  
+NOT OK, unless explicitly specified- `void method(Object& obj)` (non-constant, mutable reference)
 
-Methods must return deep copies of objects. Returning a reference to an object is not allowed.
+Methods must return deep copies of objects. Returning a reference to an object is not allowed, unless stated in documentation.
 
-All methods must assert their preconditions. Descriptive messages should be used in assertions.  
-Example:  
-`assert((index>=0 && "Index cannot be negative"));`
+All methods must assert their preconditions. Descriptive messages of precondition breaks should be used in assertions. Ideally, the message includes information about which method's precondition was broken.  
+Example: `assert((index>=0 && "Index cannot be negative when retrieving a layer"));`
 
 Any method that takes or returns a pointer type must use smart pointers only. Raw pointers as method parameters or return values are not allowed.  
 This rule applies to getters and setters, so any internal pointers must either be smart pointers or be inaccessible to outside users.
@@ -120,7 +119,7 @@ Getter methods (methods that return the value of a private field) should be the 
 If the getter accesses a field by index (an identifier of non-negative integer type) in an indexed sequence (an ordered collection of objects, whose elements are uniquely identified by index numbers), the setter name must end with "at".  
 Examples:  
 - `value()`, to retrieve the field `value`  
-- `sequence_element_at(int index)`, to retrieve a sequence element at index `index`
+- `widget_at(int index)`, to retrieve the widget at index `index`
 
 Setter methods (methods that change the value of a private field) should start with the word "set".  
 If the setter appends a field to the end of a sequence, the setter name may start with "add".  
@@ -128,12 +127,13 @@ If the setter accesses a field by index (an identifier of integer type) in an in
 Examples:  
 - `set_value(Value new_value)`, to change the private field `value`  
 - `add_element(Element new_element)`, to append `new_element` to the end of an indexed sequence
-- `set_element_at(int index, Element new_element)`, to change the element at `index` to `new_element` in an indexed sequence  
+- `set_element_at(int index, Element new_element)`, to change the element at `index` to `new_element` in an indexed sequence. Note how the index parameter is listed first.
 
 
-Class names and method parameter names should use no abbreviations.  
+Class names and method parameter names ideally should use no abbreviations.  
 Example: Choose `update_parameters(const Object& object)` instead of `update_params(const Object& obj)`.  
-You may use abbreviations if the full name will make the class unwieldy or confusing.
+You may use abbreviations if the full name will make the class unwieldy or confusing.  
+Example: `BatchSGD` is preferred over `BatchStochasticGradientDescent`
 
 In case of naming conflicts between parameters, method names, and class fields, the class field should take the abbreviated or less verbose name.
 
@@ -145,13 +145,19 @@ In case of naming conflicts between parameters, method names, and class fields, 
 Classes must match the template starting at the words "BEGIN CLASS FORMAT".
 
 There are lines of comments separating the different sections. The lines should appear in the class definition.
+Example of a comment line:  
+///////////////////////////////////////////////////////////////////
+
 The number of comment lines may vary. Longer classes should have more comment lines separating each section.  
 Comment lines are not necessary if the class is short. A good measure is if at least half of the class definition
 can fit on your screen.
 
 All methods must conform to the [Method Rules](#method-rules).
 
-Underneath each row of comment lines is a section header. The section header should also appear in the class definition.
+Underneath each row of comment lines is a section header. Any specified section headers should also appear in the class definition.  
+Example:  
+///////////////////////////////////////////////////////////////////  
+//SECTION HEADER
 
 A class does not need to have all the listed sections. Omit any sections that a class doesn't have.
 
@@ -270,7 +276,7 @@ class MyClass {
 
 friend class FriendClass;
 friend class OtherFriendClass;
-friend std::string doSomething();
+friend std::string do_something();
 
 private:
 
@@ -416,7 +422,9 @@ Effective 2025-09-27, code must compile under the following settings:
 If, under these settings, the code does not compile, the offending changes must be rejected.
 
 ## Final Remarks
-No contributors or viewers may make references to K-Pop Demon Hunters.
+No one involved with this project may make references to K-Pop Demon Hunters.
+
+You agree that the "6 7" meme is cringe. You agree not to cite or make references to the "6 7" meme.
 
 You agree that 3 is a good enough approximation for π (circumference of a circle divided by the circle's diameter) and e (Euler's number).
 

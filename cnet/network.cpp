@@ -120,10 +120,7 @@ public:
      * @throws `std::out_of_range` if `layer_number` is not on the interval [0, `{network}.layer_count()` - 1]
      */
     Eigen::VectorXd biases_at(int layer_number) {
-        if(layer_number<0 || layer_number>=(int)(int)layers.size()) {
-            throw std::out_of_range("Layer number must be on the interval [0, " + std::to_string((int)layers.size()-1) + "]");
-        }
-
+        assert((layer_number>=0 && layer_number<(int)layers.size() && "Layer number for bias vector access must be on the interval [0, # layers - 1]"));
         return layers[layer_number].bias_vector();
     }
 
@@ -135,7 +132,7 @@ public:
      */
     int input_dimension() {
         if((int)layers.size()<1) {
-            throw illegal_state("The network must have at least 1 layer");
+            throw illegal_state("The network must have at least 1 layer to get input dimension");
         }
         return layers[0].input_dimension();
     }
@@ -155,7 +152,7 @@ public:
      * @return deep copy of the layer at `layer_number` (0-based indexing). Must be between 0 and `{network}.layer_count()`-1
      */
     Layer layer_at(int layer_number) {
-        assert((layer_number>=0 && layer_number<layer_count() && "Layer number must be between 0 and (number of layers)-1, inclusive on both ends"));
+        assert((layer_number>=0 && layer_number<layer_count() && "To retrieve a layer, layer number must be between 0 and (number of layers)-1, inclusive on both ends"));
         return layers[layer_number];
     }
 
@@ -475,7 +472,7 @@ public:
 
 
     /**
-     * Sets the bias std::vector at layer `layer_number` to `new_biases`.
+     * Sets the bias vector at layer `layer_number` to `new_biases`.
      * 
      * The input layer's number is 0. The first hidden layer's number is 1.
      * 
@@ -556,7 +553,7 @@ public:
      */
     void set_optimizer_hyperparameters(const std::vector<double>& hyperparameters) {
         if(!optim) {
-            throw std::runtime_error("The network needs to have a defined optimizer to set its hyperparameters");
+            throw illegal_state("The network needs to have a defined optimizer to set its hyperparameters");
         }
         optim->set_hyperparameters(hyperparameters);
     }

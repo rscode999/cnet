@@ -3,10 +3,11 @@
 
 Documentation for each class and its methods.
 
+To use in your program, include the "cnet/network.cpp" file. Example: `#include "cnet/network.cpp"`
+
 All classes and methods are in the `CNet` namespace. The only class not in `CNet` is the `illegal_state` exception, which is not in a namespace.
 
-Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).  
-
+Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).
 
 [Back to README](../README.md)
 
@@ -22,8 +23,8 @@ Method categories:
 
 Available classes:
 
+- [Illegal State Exception](#illegal_state)
 - [Network](#network)
-    - [Illegal State Exception](#illegal_state)
     - [Constructor](#constructor)
     - [Getters](#getters)
     - [Setters](#setters)
@@ -48,6 +49,28 @@ Available classes:
 ---
 ---
 
+---
+
+## illegal_state
+
+Thrown when an object (i.e. a Network) is not in the proper configuration to call a method.
+
+This exception is *not* part of the `CNet` namespace.
+
+`illegal_state` is a subclass of `std::runtime_error`.
+
+Example: `illegal_state` would be thrown if a Network's `forward` method is called while it's disabled, or if `input_dimension` is called when the Network has no layers.
+
+<details>
+  <summary>Implementation Details</summary>
+  
+The class definition for `illegal_state` is inside `network.cpp`, in the `cnet` directory.
+
+</details>
+<br>
+
+---
+---
 
 ## Network
 
@@ -58,21 +81,9 @@ The user adds layers, a loss calculator, and an optimizer to the network prior t
 Each layer in a network has a 0-based index number, ranging from 0 to `{networkName}.layer_count()` - 1. The first layer in a network has index 0. The second has index 1, the third has index 2, and so on.  
 The input layer is the first layer. The output layer is the last layer.
 
-To use a network, the network must be enabled via `{networkName}.enable()`.
+To train and optimize a network, the network must be enabled via `{networkName}.enable()`.
 Once enabled, the network cannot be edited until `{networkName}.disable()` is called. Getter methods may still be called while a network is enabled.
 
-
----
-
-### illegal_state
-
-An exception thrown only by a Network. Thrown when enable/disable rules are broken.
-
-This exception is *not* part of the `CNet` namespace.
-
-`illegal_state` is a subclass of `std::runtime_error`.
-
-Example: `illegal_state` would be thrown if a Network's `forward` method is called while it's disabled.
 
 ---
 
@@ -102,11 +113,8 @@ Returns a deep copy of the bias vector in layer `layer_number`.
 
 **Parameters**
 
-* `layer_number` (`int`): Layer number to access.
+* `layer_number` (`int`): Layer number to access.  Must be on the interval [0, `{networkName}.layer_count()`-1].
 
-**Exceptions**
-
-* `out_of_range`: If `layer_number` is not on the interval [0, `{networkName}.layer_count()`-1].
 
 ---
 
@@ -190,6 +198,20 @@ Returns the number of layers in the network.
 
 ---
 
+#### optimizer
+
+*Signature*: `std::shared_ptr<Optimizer> optimizer()`
+
+Returns a `std::shared_ptr` to the network's optimizer.
+
+The smart pointer can be used to directly change the network's hyperparameters.
+
+**Returns:**
+
+* `std::shared_ptr<Optimizer>`: Network's optimizer, as a smart pointer.
+
+---
+
 #### output\_dimension
 
 *Signature*: `int output_dimension()`
@@ -246,11 +268,19 @@ To use this method, the network must be disabled.
 
 *Signature*: `void add_layer(int input_dimension, int output_dimension, std::string name = "layer")`
 
-Adds a new layer with the given dimensions and name. The new layer has no activation function.*
+Adds a new layer with the given dimensions and name. The new layer has no activation function.
 
 To use this method, the network must be disabled.
 
-*The activation function is the identity function, f(x)=x, a placeholder that does nothing.
+
+<details>
+  <summary>Implementation Details</summary>
+  
+The new layer's activation function is the identity function, f(x)=x, a placeholder that does nothing.
+
+</details>
+<br>
+
 
 **Parameters**
 
@@ -308,8 +338,9 @@ To successfully enable the network, the following conditions must be met:
 * The output dimension of each layer must equal the input dimension of the next layer.
 * The only layer with Softmax activation is the final (output) layer.
 
-If all conditions are met, to handle changes in network architecture, 
-the network resets all internal state previously used in training.
+If a condition is broken, an `illegal_state` exception is thrown, with an error message detailing the failed check.
+
+If all conditions are met, the network resets all internal state previously used in training.
 
 **Exceptions**
 
@@ -389,7 +420,7 @@ Unlike most setters, this method can be called when the network is enabled.
 **Parameters**
 
 * `rename_pos` (`int`): Layer index to rename. Must be on the interval [0, `{networkName}.layer_count()`-1].
-* `new_name` (`std::string`): New name.
+* `new_name` (`std::string`): New name for the chosen layer
 
 ---
 
@@ -399,14 +430,14 @@ Unlike most setters, this method can be called when the network is enabled.
 
 Sets the activation function for a given layer.
 
-To remove a layer's activation function, set the function to a `shared_ptr<IdentityActivation>`. The `IdentityActivation` applies the identity function f(x)=x to its inputs, effictively doing nothing.
+To remove a layer's activation function, set the function to a `std::shared_ptr<IdentityActivation>`. The `IdentityActivation` applies the identity function f(x)=x to its inputs, effectively doing nothing.
 
 The network must be disabled to use this method.
 
 **Parameters**
 
-* `layer_number` (`int`): Index of the layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
-* `new_activation_function` (`std::shared_ptr<ActivationFunction>`): Smart pointer to the function.
+* `layer_number` (`int`): Index of the layer to change. Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `new_activation_function` (`std::shared_ptr<ActivationFunction>`): Smart pointer to the activation function object.
 
 **Exceptions**
 
@@ -425,7 +456,7 @@ To use this method, the network must be disabled.
 **Parameters**
 
 * `layer_number` (`int`): Index of the layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
-* `new_biases` (`Eigen::VectorXd`): New bias vector (column vector). Must contain `{networkName}.output_dimension()` elements
+* `new_biases` (`Eigen::VectorXd`): New bias vector. Must be a column vector with `{selected layer}.output_dimension()` elements (dimension depends on the selected layer)
 
 **Exceptions**
 
@@ -437,7 +468,7 @@ To use this method, the network must be disabled.
 
 *Signature*: `void set_loss_calculator(std::shared_ptr<LossCalculator> new_calculator)`
 
-Replaces the current loss calculator.
+Sets the network's loss calculator to `new_calculator`, replacing any existing loss calculator.
 
 To use this method, the network must be disabled.
 
@@ -456,7 +487,7 @@ To use this method, the network must be disabled.
 
 *Signature*: `void set_optimizer(std::shared_ptr<Optimizer> new_optimizer)`
 
-Replaces the current optimizer.
+Sets the network's optimizer to `new_optimizer`, replacing any existing optimizer.
 
 To use this method, the network must be disabled.
 
@@ -476,11 +507,11 @@ To use this method, the network must be disabled.
 Sets the optimizer's hyperparameters.
 The purpose of each index in `hyperparameters` depends on the optimizer.
 
-Throws `std::runtime_error` if the network has no defined optimizer.
+Throws `illegal_state` if the network has no defined optimizer.
 
-Example: For SGD optimizers, index 0 is the new learning rate, and index 1 is for the new momentum coefficient.
+Example: For SGD optimizers, index 0 is the new learning rate, index 1 is for the new momentum coefficient, and index 2 is the new batch size.
 
-See the [optimizer-specific documentation](optimizers.md) for more information about particular optimizers.
+For more information about particular optimizers, including their preconditions, see the [optimizer-specific documentation](optimizers.md).
 
 **Parameters**
 
@@ -488,7 +519,7 @@ See the [optimizer-specific documentation](optimizers.md) for more information a
 
 **Exceptions**
 
-* `std::runtime_error`: If the network has no defined optimizer.
+* `illegal_state`: If the network has no defined optimizer.
 
 ---
 
@@ -503,7 +534,7 @@ To use this method, the network must be disabled.
 **Parameters**
 
 * `layer_number` (`int`): Layer index. Must be on the interval [0, `{networkName}.layer_count()`-1].
-* `new_weights` (`Eigen::MatrixXd`): New weight matrix. Must have `{selectedLayer}.output_dimension()` rows and `{selectedLayer}.input_dimension()` columns.
+* `new_weights` (`Eigen::MatrixXd`): New weight matrix. Must have `{selected layer}.output_dimension()` rows and `{selected layer}.input_dimension()` columns.
 
 **Exceptions**
 
@@ -523,11 +554,11 @@ If `training` is true, intermediate outputs are stored for backpropagation, allo
 
 **Returns**
 
-* `Eigen::VectorXd`: Network's output.
+* `Eigen::VectorXd`: Network's predictions for the given input
 
 **Parameters**
 
-* `input` (`const Eigen::VectorXd&`): Input vector.
+* `input` (`const Eigen::VectorXd&`): Input vector to the network.
 * `training` (`bool`): Whether the network is in training mode. Default: `true`.
 
 ---
@@ -560,7 +591,8 @@ Requires that the network is enabled.
 
 Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
 
-Call this method immediately after using the `{networkName}.forward` method for best results. That way, the stored gradients from `forward` (stored inside the network) and the output from `reverse` will update network gradients properly.
+Call this method immediately after using the `{networkName}.forward` method, using the network's output as `predictions` and the expected output as `actuals`.  
+That way, the stored gradients from `forward` (inside the network) will allow `reverse` to update the network gradients properly.
 
 This method requires the network to be enabled. Also, `{networkName}.forward` with `training = true` must have been called since the network was enabled.
 If these conditions are not met, the method throws `illegal_state`.
@@ -654,9 +686,11 @@ Names are accessed using the `name` method.
 
 #### Default constructor
 
-All pre-implemented subclasses of `ActivationFunction` have a constructor that takes no arguments. Example: `Relu()`, `Sigmoid()`
+All pre-implemented subclasses of `ActivationFunction` have a constructor that takes no arguments. Examples: `Relu()`, `Sigmoid()`
 
-ActivationFunctions are commonly used when pointed to by a smart pointer, particularly a `std::shared_ptr`.
+ActivationFunctions are commonly used when pointed to by a smart pointer, particularly a `std::shared_ptr`.  
+Example:
+```std::shared_ptr<Relu> relu_activation = std::make_shared<Relu>();```
 
 ---
 
@@ -674,7 +708,7 @@ Applies the activation function element-wise to the input.
 
 **Parameters**
 
-* `input` (`const Eigen::VectorXd&`): Value to calculate.
+* `input` (`const Eigen::VectorXd&`): Values to calculate activations.
 
 ---
 
@@ -699,15 +733,23 @@ Applies the derivative of the activation function element-wise to the input.
 *Signature:* `virtual std::string name()`
 
 Returns the unique identifier for the activation function.
-If not overridden, returns `"none"`.
 
 `IdentityActivation`'s name is "none".
 
 A function object's name is usually the class's name converted to lowercase, with underscores separating each word. Example: `Relu`'s name is "relu".
 
+<details>
+<summary>Implementation Details</summary>
+
+If this method is not overridden, this method returns "none", as with the `IdentityActivation`.
+
+</details>
+<br>
+
 **Returns**
 
 * `std::string`: Name of the activation function.
+
 
 ---
 
@@ -716,11 +758,20 @@ A function object's name is usually the class's name converted to lowercase, wit
 *Signature:* `virtual bool using_pre_activation()`
 
 Indicates whether the activation function should be applied on pre-activation inputs.
-If not overridden, returns `false`.
+
+<details>
+<summary>Implementation Details</summary>
+
+If not overridden, this method returns `false`.
+
+</details>
+<br>
 
 **Returns**
 
 * `bool`: `true` if pre-activation input is used, `false` otherwise.
+
+
 
 
 ---
@@ -901,10 +952,19 @@ Sets the layer's weight matrix.
 
 *Signature:* `Eigen::VectorXd forward(const Eigen::VectorXd& input)`
 
-Performs the linear forward operation for the given input.
+Returns the result of the linear forward operation for the given input. Does not perform any other operations.
 
 Applies weights and adds biases.
+
 **Important note**: This method does *not* apply the layer's activation function.
+
+<details>
+<summary>Implementation Details</summary>
+
+The activation function is applied in the `forward` method of a `Network`. The `Network` (as opposed to each individual `Layer`) applies activations so it can store pre- and post-activation layer outputs for optimization.
+
+</details>
+<br>
 
 **Returns**
 
@@ -948,9 +1008,9 @@ std::cout << layer;
 
 ## LossCalculator
 
-Abstract class for calculating loss.
+Abstract class for calculating loss (error between actual and expected output).
 
-A `shared_ptr` smart pointer to a `LossCalculator` can be used by a `Network`.
+A `std::shared_ptr` smart pointer to a `LossCalculator` can be used by a `Network`.
 
 Pre-implemented concrete subclasses:
 
@@ -1012,6 +1072,14 @@ Returns the gradient of the losses when measured between `predictions` and `actu
 *Signature:* `virtual std::string name()`
 
 Returns the identifying string of the loss calculator.
+
+<details>
+<summary>Implementation Details</summary>
+
+This method is purely virtual. Subclasses must override this method.
+
+</details>
+<br>
 
 **Returns**
 
