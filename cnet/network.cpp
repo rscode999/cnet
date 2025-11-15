@@ -84,7 +84,7 @@ private:
     /**
      * Smart pointer to object that calculates losses
      */
-    std::shared_ptr<LossCalculator> loss_calculator;
+    std::shared_ptr<LossCalculator> loss_calc;
 
     /**
      * Smart pointer to object that improves the model's weights
@@ -119,7 +119,7 @@ public:
      * @return biases of layer `layer_number`
      * @throws `std::out_of_range` if `layer_number` is not on the interval [0, `{network}.layer_count()` - 1]
      */
-    Eigen::VectorXd biases_at(int layer_number) {
+    Eigen::VectorXd biases_at(int layer_number) const {
         assert((layer_number>=0 && layer_number<(int)layers.size() && "Layer number for bias vector access must be on the interval [0, # layers - 1]"));
         return layers[layer_number].bias_vector();
     }
@@ -130,7 +130,7 @@ public:
      * @return the number of inputs of this network
      * @throws `illegal_state` if the network has less than 1 layer
      */
-    int input_dimension() {
+    int input_dimension() const {
         if((int)layers.size()<1) {
             throw illegal_state("The network must have at least 1 layer to get input dimension");
         }
@@ -142,7 +142,7 @@ public:
     /**
      * @return whether the network is enabled
      */
-    bool is_enabled() {
+    bool is_enabled() const {
         return enabled;
     }
 
@@ -151,7 +151,7 @@ public:
     /**
      * @return deep copy of the layer at `layer_number` (0-based indexing). Must be between 0 and `{network}.layer_count()`-1
      */
-    Layer layer_at(int layer_number) {
+    Layer layer_at(int layer_number) const {
         assert((layer_number>=0 && layer_number<layer_count() && "To retrieve a layer, layer number must be between 0 and (number of layers)-1, inclusive on both ends"));
         return layers[layer_number];
     }
@@ -169,7 +169,7 @@ public:
      * @return layer with the lowest index whose name is `layer_name`
      * @throws `std::out_of_range` if no matching layer name is found
      */
-    Layer layer_at(std::string layer_name) {
+    Layer layer_at(std::string layer_name) const {
         for(Layer l : layers) {
             if(l.name() == layer_name) {
                 return l;
@@ -190,22 +190,36 @@ public:
 
 
 
+    std::shared_ptr<LossCalculator> loss_calculator() const {
+        return this->loss_calc;
+    }
+
+
+
     /**
      * @return smart pointer to the network's optimizer object
      * 
      * The returned pointer can be used to directly change the network's optimizer.
      */
-    std::shared_ptr<Optimizer> optimizer() {
+    std::shared_ptr<Optimizer> optimizer() const {
         return optim;
     }
 
 
 
     /**
+     * @return std::vector containing the optimizer's hyperparameters, in the order required by the current optimizer's `set_optimizer_hyperparameters` method
+     */
+    std::vector<double> optimizer_hyperparameters() {
+        return optim->hyperparameters();
+    }
+
+
+    /**
      * @return the number of outputs of this network
      * @throws `illegal_state` if the network has less than 1 layer
      */
-    int output_dimension() {
+    int output_dimension() const {
         if((int)layers.size()<1) {
             throw illegal_state("The network must have at least 1 layer");
         }
@@ -223,7 +237,7 @@ public:
      * @return weights of layer `layer_number`
      * @throws `std::out_of_range` if `layer_number` is not a valid index number
      */
-    Eigen::MatrixXd weights_at(int layer_number) {
+    Eigen::MatrixXd weights_at(int layer_number) const {
         assert((layer_number>=0 && layer_number<(int)layers.size() && "Layer number must be between 0 and (number of layers)-1"));
         return layers[layer_number].weight_matrix();
     }
@@ -327,7 +341,7 @@ public:
         }
 
         //Ensure there is a loss calculator
-        if(!loss_calculator) {
+        if(!loss_calc) {
             throw illegal_state("Enable check failed- The network must have a loss calculator to begin training");
         }
 
@@ -509,10 +523,10 @@ public:
         }
 
         //Free any existing loss calculator
-        if(loss_calculator) {
-            loss_calculator.reset();
+        if(loss_calc) {
+            loss_calc.reset();
         }
-        loss_calculator = new_calculator;
+        loss_calc = new_calculator;
     }
 
 
@@ -685,7 +699,7 @@ public:
         
         //Use the network's optimizer
         optim->step(layers, initial_input, intermediate_outputs,
-            predictions, actuals, loss_calculator);
+            predictions, actuals, loss_calc);
     }
 
 
@@ -734,7 +748,7 @@ public:
      * Properly destroys a Network.
      */
     ~Network() {
-        loss_calculator.reset();
+        loss_calc.reset();
         optim.reset();
     }
 
@@ -749,8 +763,8 @@ std::ostream& operator<<(std::ostream& os, const Network& network) {
     os << network.layer_count() << " layers, ";
 
     //loss calculator
-    if(network.loss_calculator) {
-        os << network.loss_calculator->name() << " loss, ";
+    if(network.loss_calc) {
+        os << network.loss_calc->name() << " loss, ";
     }
     else {
         os << "no defined loss, ";

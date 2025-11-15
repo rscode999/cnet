@@ -29,6 +29,11 @@ friend class Network;
 public:
 
     /**
+     * @return std::vector containing the optimizer hyperparameters, in the order required by `set_hyperparameters`
+     */
+    virtual std::vector<double> hyperparameters() = 0;
+
+    /**
      * @return the optimizer's identifying std::string.
      */
     virtual std::string name() {
@@ -39,7 +44,8 @@ public:
      * Sets the optimizer's hyperparameters.
      * The purpose of each index in `hyperparameters` depends on the optimizer.
      * 
-     * Example: For SGD optimizers, index 0 is the new learning rate, and index 1 is for the new momentum coefficient.
+     * Example: For SGD optimizers, index 0 is the new learning rate, index 1 is for the new momentum coefficient,
+     * and index 2 is for the new batch size.
      * 
      * @param hyperparameters vector of new hyperparameters to set (exact parameters depends on the optimizer)
      */
@@ -211,6 +217,14 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //GETTERS
+
+    /**
+     * @return vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), batch size (index 2)
+     */
+    std::vector<double> hyperparameters() override {
+        return {learn_rate, momentum_coeff, (double)batch_size};
+    }
+
     
     /**
      * @return `"sgd"`, the optimizer's identifying string
@@ -453,6 +467,27 @@ private:
     }
 
 };
+
+
+
+/**
+ * Returns a std::shared_ptr to the optimizer whose name is `name`.
+ * 
+ * @param name name of desired optimizer
+ * @return optimizer with matching name
+ * @throws `runtime_error` if no matching optimizer name is found
+ */
+std::shared_ptr<Optimizer> make_optimizer(std::string name, std::vector<double> hyperparameters) {
+    using namespace std;
+
+    if(name == "sgd") {
+        assert(hyperparameters.size() == 3 && "SGD creation requires 3 hyperparameters");
+        assert((int)hyperparameters[2] > 0 && "Batch size of hyperparameters for SGD must be positive");
+        shared_ptr<SGD> out = make_shared<SGD>(hyperparameters[0], hyperparameters[1], (int)hyperparameters[2]);
+        return out;
+    }
+    throw runtime_error("optimizer name not recognized");
+}
 
 
 

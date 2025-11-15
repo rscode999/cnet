@@ -183,4 +183,28 @@ public:
 
 
 
+/**
+ * Returns a std::shared_ptr to the loss calculator whose name is `name`.
+ * 
+ * @param name name of desired loss calculator
+ * @return loss calculator with matching name
+ * @throws `runtime_error` if no matching loss calculator name is found
+ */
+std::shared_ptr<LossCalculator> make_loss_calculator(std::string name) {
+    using namespace std;
+
+    if(name == "cross_entropy") {
+        shared_ptr<CrossEntropy> out = make_shared<CrossEntropy>();
+        return out;
+    }
+    else if(name == "mean_squared_error") {
+        shared_ptr<MeanSquaredError> out = make_shared<MeanSquaredError>();
+        return out;
+    }
+    throw runtime_error("unrecognized loss calculator name \"" + name + "\"");
+}
+
+
+
+
 }

@@ -135,28 +135,28 @@ public:
     /**
      * @return the layer's bias vector, as an Eigen::VectorXd
      */
-    Eigen::VectorXd bias_vector() {
+    Eigen::VectorXd bias_vector() const {
         return biases;
     }
     
     /**
      * @return the number of elements in the layer's input
      */
-    int input_dimension() {
+    int input_dimension() const {
         return weights.cols();
     }
 
     /**
      * @return the layer's name
      */
-    std::string name() {
+    std::string name() const {
         return layer_name;
     }
 
     /**
      * @return the number of elements in the layer's output
      */
-    int output_dimension() {
+    int output_dimension() const {
         return weights.rows();
     }
 
@@ -164,7 +164,7 @@ public:
     /**
      * @return the layer's weight matrix, as an Eigen::MatrixXd
      */
-    Eigen::MatrixXd weight_matrix() {
+    Eigen::MatrixXd weight_matrix() const {
         return weights;
     }
 

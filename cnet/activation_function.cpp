@@ -1,4 +1,6 @@
 #include <cmath>
+#include <memory>
+#include <set>
 #include <string>
 
 #include <Eigen/Core>
@@ -6,6 +8,7 @@
 
 
 namespace CNet {
+
 
 
 
@@ -253,6 +256,37 @@ public:
     }
 
 };
+
+
+/**
+ * Returns a std::shared_ptr to the activation function whose name is `name`.
+ * 
+ * @param name name of desired activation function
+ * @return activation function with matching name
+ * @throws `runtime_error` if no matching activation function name is found
+ */
+std::shared_ptr<ActivationFunction> make_activation_function(std::string name) {
+    using namespace std;
+
+    if(name == "none") {
+        shared_ptr<IdentityActivation> out = make_shared<IdentityActivation>();
+        return out;
+    }
+    else if(name == "relu") {
+        shared_ptr<Relu> out = make_shared<Relu>();
+        return out;
+    }
+    else if(name == "sigmoid") {
+        shared_ptr<Sigmoid> out = make_shared<Sigmoid>();
+        return out;
+    }
+    else if(name == "softmax") {
+        shared_ptr<Softmax> out = make_shared<Softmax>();
+        return out;
+    }
+    throw runtime_error("unrecognized activation function name \"" + name + "\"");
+}
+
 
 
 

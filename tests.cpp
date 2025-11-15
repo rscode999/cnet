@@ -558,7 +558,6 @@ void test_hot_swap() {
 
 
 
-
 int main() {
     //Call testing functions as you wish.
     // test_xor_1layer();
