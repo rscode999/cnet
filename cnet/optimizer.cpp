@@ -31,12 +31,12 @@ public:
     /**
      * @return std::vector containing the optimizer hyperparameters, in the order required by `set_hyperparameters`
      */
-    virtual std::vector<double> hyperparameters() = 0;
+    virtual std::vector<double> hyperparameters() const = 0;
 
     /**
      * @return the optimizer's identifying std::string.
      */
-    virtual std::string name() {
+    virtual std::string name() const {
         return "optimizer";
     }
 
@@ -54,7 +54,7 @@ public:
     /**
      * @return detailed information about the optimizer, including hyperparameters
      */
-    virtual std::string to_string() {
+    virtual std::string to_string() const {
         return "optimizer";
     }
 
@@ -221,7 +221,7 @@ public:
     /**
      * @return vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), batch size (index 2)
      */
-    std::vector<double> hyperparameters() override {
+    std::vector<double> hyperparameters() const override {
         return {learn_rate, momentum_coeff, (double)batch_size};
     }
 
@@ -229,7 +229,7 @@ public:
     /**
      * @return `"sgd"`, the optimizer's identifying string
      */
-    std::string name() override {
+    std::string name() const override {
         return "sgd";
     }
 
@@ -237,7 +237,7 @@ public:
     /**
      * @return string containing the optimizer's name, learning rate, momentum coefficient, and batch size
      */
-    std::string to_string() override {
+    std::string to_string() const override {
         return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff) 
             + ", batch size=" + std::to_string(batch_size);
     }

@@ -3,7 +3,7 @@
 
 Documentation for each class and its methods.
 
-To use in your program, include the "cnet/network.cpp" file. Example: `#include "cnet/network.cpp"`
+To use in your program, include the "cnet/netwcoreork.cpp" file. Example: `#include "cnet/core.cpp"`
 
 All classes and methods are in the `CNet` namespace. The only class not in `CNet` is the `illegal_state` exception, which is not in a namespace.
 
@@ -23,7 +23,10 @@ Method categories:
 
 Available classes:
 
-- [Illegal State Exception](#illegal_state)
+- [Illegal State Exception (Not in a class)](#illegal_state)
+
+<br>
+
 - [Network](#network)
     - [Constructor](#constructor)
     - [Getters](#getters)
@@ -44,6 +47,10 @@ Available classes:
     - [Methods](#methods-3)
 - [Optimizer (Abstract class)](#optimizer)
     - [Detailed optimizer documentation ->](optimizers.md)
+
+<br>
+
+- [Loading and Storage Methods (Not in a class)](#network-saving-methods)
 
 ---
 ---
@@ -103,7 +110,7 @@ The created network is not enabled. It has no layers, loss calculator, or optimi
 
 #### biases\_at
 
-*Signature*: `Eigen::VectorXd biases_at(int layer_number)`
+*Signature*: `Eigen::VectorXd biases_at(int layer_number) const`
 
 Returns a deep copy of the bias vector in layer `layer_number`.
 
@@ -120,7 +127,7 @@ Returns a deep copy of the bias vector in layer `layer_number`.
 
 #### input\_dimension
 
-*Signature*: `int input_dimension()`
+*Signature*: `int input_dimension() const`
 
 Returns the number of inputs of this network.
 
@@ -130,13 +137,13 @@ Returns the number of inputs of this network.
 
 **Exceptions**
 
-* `illegal_state`: If the network has fewer than 1 layer.
+* `illegal_state`: If the network has no layers.
 
 ---
 
 #### is\_enabled
 
-*Signature*: `bool is_enabled()`
+*Signature*: `bool is_enabled() const`
 
 Returns whether the network is enabled.
 
@@ -150,7 +157,7 @@ The network must be enabled to train and evaluate with it.
 
 #### layer\_at (by index)
 
-*Signature*: `Layer layer_at(int layer_number)`
+*Signature*: `Layer layer_at(int layer_number) const`
 
 Returns a deep copy of the layer at `layer_number`.
 
@@ -166,7 +173,7 @@ Returns a deep copy of the layer at `layer_number`.
 
 #### layer\_at (by name)
 
-*Signature*: `Layer layer_at(std::string layer_name)`
+*Signature*: `Layer layer_at(const std::string& layer_name) const`
 
 Returns the layer whose name is `layer_name`.
 
@@ -198,9 +205,21 @@ Returns the number of layers in the network.
 
 ---
 
+#### loss\_calculator
+
+*Signature:* `std::shared_ptr<LossCalculator> loss_calculator() const`
+
+Returns a smart pointer to the network's loss calculator.
+
+**Returns**
+
+* `std::shared_ptr<LossCalculator>`: Network's loss calculator.
+
+---
+
 #### optimizer
 
-*Signature*: `std::shared_ptr<Optimizer> optimizer()`
+*Signature*: `std::shared_ptr<Optimizer> optimizer() const`
 
 Returns a `std::shared_ptr` to the network's optimizer.
 
@@ -212,9 +231,23 @@ The smart pointer can be used to directly change the network's hyperparameters.
 
 ---
 
+#### optimizer_hyperparameters
+
+*Signature:* `std::vector<double> optimizer_hyperparameters() const`
+
+Returns a std::vector containing the optimizer's hyperparameters, in the order required by the current optimizer's `set_optimizer_hyperparameters` method.
+
+Example: If the Network uses a SGD optimizer, the output has 3 indices. Index 0 contains the learning rate, index 1 has the momemtum coefficient, and index 2 has the batch size (as a double).
+
+**Returns:**
+
+* `std::vector<double>`: Vector containing the optimizer hyperparameters.
+
+---
+
 #### output\_dimension
 
-*Signature*: `int output_dimension()`
+*Signature*: `int output_dimension() const`
 
 Returns the number of outputs of this network.
 
@@ -230,7 +263,7 @@ Returns the number of outputs of this network.
 
 #### weights\_at
 
-*Signature*: `Eigen::MatrixXd weights_at(int layer_number)`
+*Signature*: `Eigen::MatrixXd weights_at(int layer_number) const`
 
 Returns a deep copy of the weight matrix in layer `layer_number`.
 
@@ -782,7 +815,7 @@ If not overridden, this method returns `false`.
 
 A linear layer in a network.
 
-There is no distinction between an input, hidden, or output layer. A layer's role depends on its position in the network.
+There is no distinction between an input, hidden, or output layer. A layer's role depends on its position in the network. The first layer is the input. The last layer is the output.
 
 Each layer has a weight matrix and separate bias vector.
 They can be manually viewed or updated using getter and setter methods.
@@ -1106,5 +1139,85 @@ Further info is in the [optimizer-specific documentation](optimizers.md).
 
 ---
 ---
+
+## Network Saving Methods
+
+Methods to save and load network configurations from external files. The entire network's state can be written to a save file, then reconstructed.
+
+These methods are standalone methods that are *not* part of a class. 
+
+Loading and storing methods can be used by including "cnet/core.cpp" (they can't be used if "cnet/network.cpp" is included):
+```
+#include "cnet/core.cpp"
+```
+
+Example usage, to save a network to "configuration.txt", then load the saved network:
+```
+CNet::Network net1;
+
+Add layers, loss calculator, optimizer to `net1`...
+
+//Saves the configuration of `net1` to the file "configuration.txt"
+store_network_config("configuration.txt", net1); 
+
+//Loads the configuration stored in "configuration.txt" to `net2`
+CNet::Network net2 = load_network_config("configuration.txt");
+```
+
 ---
+
+### Storing Networks
+
+#### store_network_config
+
+*Signature:* `void store_network_config(const std::string config_filepath&, const CNet::Network& network)`
+
+Stores `network` into the configuration file at the path `config_filepath` (including the file extension).
+
+All leading and trailing whitespace will be removed from layer names.  
+The chosen file will be overwritten.
+
+Note: All layers in the network must have names that have no whitespace.
+The default layer name is "layer", not the empty string.
+
+**Parameters**
+
+* `config_filepath` (`const std::string&`): filepath to store configuration at
+* `network` (`const CNet::Network&`): Network object to store at the specified filepath. All layers in the network must have at least 1 non-whitespace character in their names.
+
+**Exceptions**
+
+* `runtime_error`: If the file at `config_filepath` does not exist, or cannot be opened.
+
+---
+
+### Loading Networks
+
+#### load_network_config
+
+*Signature:* `CNet::Network load_network_config(const std::string& config_filepath)`
+
+ Returns the network whose configuration is specified in the file at `config_filepath` (including the file extension).
+
+The network that is outputted from this method is disabled.
+
+Ensure that the chosen configuration file is in the same format as that produced by the `store_network_config` method.  
+If not, this method will not work: the malformed file may trigger an assertion or cause a segfault.
+
+**Parameters**
+
+* `config_filepath` (`const std::string&`): filepath to load configuration from. The file must be in the format produced by `store_network_config`.
+
+**Returns**
+
+* `CNet::Network`: Network containing the configuration at the specified filepath.
+
+**Exceptions**
+
+* `runtime_error`: If the file at `config_filepath` does not exist, or cannot be opened. There is no check for a file in the incorrect format.
+
+---
+---
+---
+
 [Back to table of contents](#table-of-contents)

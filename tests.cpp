@@ -1,4 +1,4 @@
-#include "cnet/network.cpp"
+#include "cnet/core.cpp"
 
 #include <iostream>
 
@@ -558,6 +558,47 @@ void test_hot_swap() {
 
 
 
+/**
+ * Stores a network to a file, then loads the network from the file.
+ */
+void test_file_load() {
+    Network net;
+
+    //Load from an empty file
+    ofstream input_file("test.txt");
+    input_file << "";
+    input_file.close();
+    Network net2 = load_network_config("test.txt");
+    cout << net2 << "\n" << endl;
+
+    // Layers, loss calculator, optimizer
+    shared_ptr<Relu> relu = make_shared<Relu>();
+    net.add_layer(2, 3, relu, "my relu layer");
+    net.add_layer(3, 3);
+    net.set_loss_calculator(make_shared<MeanSquaredError>());
+    net.set_optimizer(make_shared<SGD>(0.01, 0.9, 5));
+    store_network_config("test.txt", net);
+    net2 = load_network_config("test.txt");
+    cout << net2 << "\n" << endl;
+
+    //Completely empty network
+    net = Network();
+    store_network_config("test.txt", net);
+    net2 = load_network_config("test.txt");
+    cout << net2 << "\n" << endl;
+
+    //Layers, but no optimizer or loss calculator
+    net = Network();
+    net.add_layer(1, 1, " a ");
+    net.add_layer(1, 3, "hello world");
+    // cout << net << endl;
+    store_network_config("test.txt", net);
+    net2 = load_network_config("test.txt");
+    cout << net2 << endl;
+}
+
+
+
 int main() {
     //Call testing functions as you wish.
     // test_xor_1layer();
@@ -565,5 +606,6 @@ int main() {
     // test_training_xor();
     // test_training_binconvert();
     // test_add_remove();
-    test_hot_swap();
+    // test_hot_swap();
+    test_file_load();
 }

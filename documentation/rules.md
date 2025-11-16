@@ -144,9 +144,9 @@ In case of naming conflicts between parameters, method names, and class fields, 
 
 Classes must match the template starting at the words "BEGIN CLASS FORMAT".
 
-There are lines of comments separating the different sections. The lines should appear in the class definition.
+There are lines of comments separating the different sections. The lines should appear in the class definition.  
 Example of a comment line:  
-///////////////////////////////////////////////////////////////////
+`///////////////////////////////////////////////////////////////////`
 
 The number of comment lines may vary. Longer classes should have more comment lines separating each section.  
 Comment lines are not necessary if the class is short. A good measure is if at least half of the class definition
@@ -156,8 +156,10 @@ All methods must conform to the [Method Rules](#method-rules).
 
 Underneath each row of comment lines is a section header. Any specified section headers should also appear in the class definition.  
 Example:  
+```
 ///////////////////////////////////////////////////////////////////  
 //SECTION HEADER
+```
 
 A class does not need to have all the listed sections. Omit any sections that a class doesn't have.
 
@@ -192,7 +194,7 @@ const int MAX_LAYERS = 1000;
 
 Constants can have public access.
 
-//////////////////////////////////////////////////////////////  
+`//////////////////////////////////////////////////////////////`  
 
 Variable fields  
 Must be declared in a logical order. If no logical order exists, declare in alphabetical order by variable name.
@@ -201,35 +203,39 @@ All variable fields must be private.
 
 Reminder: All constant and variable fields MUST HAVE DOCSTRINGS!
 
-
+```
 //////////////////////////////////////////////////////////////  
 //CONSTRUCTOR
+```
 
 Class constructor(s). If the class has multiple constructors, 
 the most frequently used constructors are first.  
 ALL CLASSES must have an explicitly defined constructor, even if the constructor does nothing.
 Exception: subclasses do not need explicitly defined constructors if the superclass has a defined constructor.
 
-
+```
 //////////////////////////////////////////////////////////////  
 //GETTERS
+```
 
 Getter methods (methods that retrieve a private field), in alphabetical order by method name
 
-
+```
 //////////////////////////////////////////////////////////////  
 //SETTERS
+```
 
 Setter methods (methods that change the value of a private field), in alphabetical order by method name
 
 If a method is overloaded, the method that takes the least parameters should be first. In case of a tie, the method that takes compound objects (as opposed to primitive types) should go last. If there is still a tie, the method author may decide the order.  
 Method overloads are ideally separated by 1-2 blank lines.
 
-
+```
 //////////////////////////////////////////////////////////////  
 //METHODS (alternative title: ADDITIONAL METHODS)
+```
 
-Additional methods  
+Methods that are not constructors, getters, or setters.  
 All additional methods should be in alphabetical order by the method's name.
 
 Private helper methods for a single method may go immediately above the parent method.
@@ -244,9 +250,10 @@ methods must be separated by 3 blank lines.
 If a method is overloaded, the method that takes the least parameters should be first. In case of a tie, the method that takes compound objects (as opposed to primitive types) should go last. If there is still a tie, the method author may decide the order.  
 Method overloads are ideally separated by 1-2 blank lines.
 
-
+```
 //////////////////////////////////////////////////////////////  
 //OPERATOR OVERLOADS
+```
 
 Methods that overload an operator. These may be in any order.
 

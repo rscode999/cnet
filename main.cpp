@@ -1,4 +1,4 @@
-#include "cnet/network.cpp"
+#include "cnet/core.cpp"
 
 #include <iostream>
 
@@ -96,7 +96,7 @@ int main() {
     Train a neural network to the input data.
     Then print the network's output for each value in `inputs`.
 
-    The headers <iostream>, <memory>, and <std::vector> are provided. The Eigen and std namespaces are used.
+    The headers <iostream>, <memory>, and <vector> are provided. The Eigen and std namespaces are used.
     To make a shared smart pointer, use `shared_ptr {name} = make_shared<typename>(type's arguments...)`
 
     For 5 inputs, this setup gave over 90% accuracy:

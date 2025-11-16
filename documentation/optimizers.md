@@ -39,9 +39,23 @@ All Optimizers share the virtual methods below. They can be called on any Optimi
 
 ---
 
+#### hyperparameters
+
+*Signature:* `virtual std::vector<double> hyperparameters() const`
+
+Returns a vector containing the optimizer hyperparameters, in the order required by the optimizer's `set_hyperparameters` method.
+
+All hyperparameters are of type `double`, even if some hyperparameters must be integers.
+
+**Returns:**
+
+* `std::vector<double>`: Vector containing the optimizer hyperparameters.
+
+---
+
 #### name
 
-*Signature*: `virtual std::string name()`
+*Signature*: `virtual std::string name() const`
 
 Returns the optimizer's identifying string.
 
@@ -82,7 +96,7 @@ Note that the preconditions on `hyperparameters`'s length, and for each of its i
 
 #### to_string
 
-*Signature*: `virtual std::string to_string()`
+*Signature*: `virtual std::string to_string() const`
 
 Returns a string containing detailed information about the optimizer's state.
 
@@ -136,6 +150,16 @@ Constructs a new SGD optimizer using the given hyperparameters.
 
 ### Getters
 
+#### hyperparameters
+
+Returns a std::vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), and batch size (index 2).
+
+**Returns:**
+
+* `std::vector<double>`: vector containing optimizer hyperparameters
+
+---
+
 #### learning\_rate
 
 *Signature*: `double learning_rate()`
@@ -172,7 +196,7 @@ Returns `"sgd"`, the identifying string of the SGD optimizer.
 
 ---
 
-#### to_string
+#### to\_string
 
 *Signature*: `virtual std::string to_string()`
 

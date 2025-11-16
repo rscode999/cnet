@@ -15,7 +15,7 @@ Even if speed goals are not met, I still wanted to harness the **full power of C
 
 Although widely used, PyTorch has features that I found confusing. The most striking feature is that optimizers (or "criterions", in PyTorch language) are separate from the network. I thought that an optimizer, as part of the network, belongs inside the network instead of outside it. Another confusing feature is that PyTorch, and Tensorflow too, forces users to make custom classes to build networks instead of having pre-built network objects available.
 
-Using **the power of C++**, I created a neural network framework *from scratch* with these design goals:
+Using **the power of C++**, I created a neural network framework with these design goals:
 - Have the network be the central container. All functionality can be accessed through the network.
 - Enable the framework to be extended using abstract classes and polymorphism
 - Use straightforward methods for network configuration
@@ -45,10 +45,12 @@ your-repo-name
 If you have GnuMake installed, change the `EIGEN_DIRECTORY_PATH` variable in the [Makefile](Makefile) to the name of your Eigen folder.  
 Your executable's name will be `OUTPUT_EXECUTABLE_NAME`.
 
-To use CNet in your program, include the "network.cpp" file in the "cnet" directory:
+To use CNet in your program, include the "core.cpp" file in the "cnet" directory:
 ```
-#include "cnet/network.cpp"
+#include "cnet/core.cpp"
 ```
+
+Including "cnet/network.cpp" does not include saving and loading networks from files.
 
 You may want to use the CNet namespace as well:
 ```
@@ -57,7 +59,7 @@ using namespace CNet;
 
 ## Quick Start Guide
 
-Ensure you have the line `#include "cnet/network.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in this repo's top-level directory.
+Ensure you have the line `#include "cnet/core.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in this repo's top-level directory.
 
 To create a network, use the CNet namespace,* then create a new Network object:
 ```

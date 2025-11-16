@@ -128,7 +128,7 @@ public:
 
     /**
      * @return the number of inputs of this network
-     * @throws `illegal_state` if the network has less than 1 layer
+     * @throws `illegal_state` if the network has no layers
      */
     int input_dimension() const {
         if((int)layers.size()<1) {
@@ -169,7 +169,7 @@ public:
      * @return layer with the lowest index whose name is `layer_name`
      * @throws `std::out_of_range` if no matching layer name is found
      */
-    Layer layer_at(std::string layer_name) const {
+    Layer layer_at(const std::string& layer_name) const {
         for(Layer l : layers) {
             if(l.name() == layer_name) {
                 return l;
@@ -190,6 +190,9 @@ public:
 
 
 
+    /**
+     * @return smart pointer to the Network's loss calculator
+     */
     std::shared_ptr<LossCalculator> loss_calculator() const {
         return this->loss_calc;
     }
@@ -210,7 +213,7 @@ public:
     /**
      * @return std::vector containing the optimizer's hyperparameters, in the order required by the current optimizer's `set_optimizer_hyperparameters` method
      */
-    std::vector<double> optimizer_hyperparameters() {
+    std::vector<double> optimizer_hyperparameters() const {
         return optim->hyperparameters();
     }
 
@@ -321,7 +324,7 @@ public:
     /**
      * Enables the network, allowing training and predictions.
      * 
-     * Before being enabled, the network performs a check.
+     * Before being enabled, this method performs a check.
      * 
      * Check: The network must have at least 1 layer, a loss calculator, and an optimizer.
      * The output dimension of each layer must equal the input dimension of the next layer.
