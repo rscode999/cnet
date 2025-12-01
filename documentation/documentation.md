@@ -3,7 +3,7 @@
 
 Documentation for each class and its methods.
 
-To use in your program, include the "cnet/netwcoreork.cpp" file. Example: `#include "cnet/core.cpp"`
+To use in your program, include the "cnet/core.cpp" file. Example: `#include "cnet/core.cpp"`
 
 All classes and methods are in the `CNet` namespace. The only class not in `CNet` is the `illegal_state` exception, which is not in a namespace.
 
@@ -23,7 +23,7 @@ Method categories:
 
 Available classes:
 
-- [Illegal State Exception (Not in a class)](#illegal_state)
+- [Illegal State Exception](#illegal_state)
 
 <br>
 
@@ -45,12 +45,14 @@ Available classes:
 - [LossCalculator (Abstract class)](#losscalculator)
     - [Constructor](#constructor-3)
     - [Methods](#methods-3)
-- [Optimizer (Abstract class)](#optimizer)
+- [Optimizer (Abstract class)](#optimizer-1)
     - [Detailed optimizer documentation ->](optimizers.md)
 
 <br>
 
-- [Loading and Storage Methods (Not in a class)](#network-saving-methods)
+- [Standalone Methods (not in classes)](#standalone-methods)
+  - [Loading and Storing Networks](#loading-and-storing-networks)
+  - [Creating Network Components by Name](#creating-network-components-by-name)
 
 ---
 ---
@@ -71,7 +73,7 @@ Example: `illegal_state` would be thrown if a Network's `forward` method is call
 <details>
   <summary>Implementation Details</summary>
   
-The class definition for `illegal_state` is inside `network.cpp`, in the `cnet` directory.
+The class definition for `illegal_state` is inside the file "network.cpp", in the "cnet" directory.
 
 </details>
 <br>
@@ -594,6 +596,10 @@ If `training` is true, intermediate outputs are stored for backpropagation, allo
 * `input` (`const Eigen::VectorXd&`): Input vector to the network.
 * `training` (`bool`): Whether the network is in training mode. Default: `true`.
 
+**Exceptions**
+
+* `illegal_state`: If the network is disabled.
+
 ---
 
 #### predict
@@ -602,7 +608,7 @@ If `training` is true, intermediate outputs are stored for backpropagation, allo
 
 Returns the predictions for the given input.
 
-When this method is used, the network *does not* internally record intermediate layer outputs for backpropagation. Saves memory and computation time.
+When this method is used, the network *does not* internally record intermediate layer outputs for backpropagation, saving memory and computation time.
 
 Equivalent to `{networkName}.forward(input, false)`.
 
@@ -610,11 +616,15 @@ Requires that the network is enabled.
 
 **Returns**
 
-* `Eigen::VectorXd`: Network's output.
+* `Eigen::VectorXd`: Network's predictions for the given input
 
 **Parameters**
 
 * `input` (`const Eigen::VectorXd&`): Input vector to make predictions with.
+
+**Exceptions**
+
+* `illegal_state`: If the network is disabled.
 
 ---
 
@@ -624,8 +634,8 @@ Requires that the network is enabled.
 
 Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
 
-Call this method immediately after using the `{networkName}.forward` method, using the network's output as `predictions` and the expected output as `actuals`.  
-That way, the stored gradients from `forward` (inside the network) will allow `reverse` to update the network gradients properly.
+Recommendation: Call this method immediately after using the `{networkName}.forward` method, using the network's output as `predictions` and the expected output as `actuals`.  
+That way, the stored gradients from `forward` (stored inside the network) will allow `reverse` to update the network gradients properly.
 
 This method requires the network to be enabled. Also, `{networkName}.forward` with `training = true` must have been called since the network was enabled.
 If these conditions are not met, the method throws `illegal_state`.
@@ -637,7 +647,7 @@ If these conditions are not met, the method throws `illegal_state`.
 
 **Exceptions**
 
-* `illegal_state`: If the network is disabled.
+* `illegal_state`: If the network is disabled, or a training forward pass was not completed.
 
 ---
 
@@ -672,9 +682,9 @@ net += new_layer;
 
 #### output stream insertion (`<<`)
 
-*Signature*: `friend std::ostream& operator<<(std::ostream& os, const Network& network)`
+*Signature*: `friend std::ostream& operator<<(std::ostream& output_stream, const Network& network)`
 
-Exports `network` to the output stream `os`, returning a reference to `os` with `network` added.
+Exports `network` to the output stream `output_stream`, returning a reference to `output_stream` with `network` added.
 
 The exported network, as a `std::string`, contains the Network's enabled/disabled status, loss calculator, optimizer, and layers.
 
@@ -690,7 +700,7 @@ std::cout << net;
 
 **Parameters**
 
-* `os` (`std::ostream&`): Output stream to export to.
+* `output_stream` (`std::ostream&`): Output stream to export to.
 * `network` (`const Network&`): Network to export.
 
 
@@ -713,6 +723,15 @@ Pre-implemented concrete subclasses:
 
 Names are accessed using the `name` method.
 
+<br>
+<details>
+  <summary>Notice to Implementers</summary>
+  
+The file "activation_function.cpp" contains the method `make_activation_function`. If creating a new activation function, add the function's name to `make_activation_function`. If not, the function can't be stored and loaded to external files.
+
+</details>
+<br>
+
 ---
 
 ### Constructor
@@ -731,7 +750,7 @@ Example:
 
 #### compute
 
-*Signature:* `virtual Eigen::VectorXd compute(const Eigen::VectorXd& input)`
+*Signature:* `virtual Eigen::VectorXd compute(const Eigen::VectorXd& input) const`
 
 Applies the activation function element-wise to the input.
 
@@ -747,7 +766,7 @@ Applies the activation function element-wise to the input.
 
 #### compute\_derivative
 
-*Signature:* `virtual Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input)`
+*Signature:* `virtual Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const`
 
 Applies the derivative of the activation function element-wise to the input.
 
@@ -763,7 +782,7 @@ Applies the derivative of the activation function element-wise to the input.
 
 #### name
 
-*Signature:* `virtual std::string name()`
+*Signature:* `virtual std::string name() const`
 
 Returns the unique identifier for the activation function.
 
@@ -788,7 +807,7 @@ If this method is not overridden, this method returns "none", as with the `Ident
 
 #### using\_pre\_activation
 
-*Signature:* `virtual bool using_pre_activation()`
+*Signature:* `virtual bool using_pre_activation() const`
 
 Indicates whether the activation function should be applied on pre-activation inputs.
 
@@ -818,7 +837,8 @@ A linear layer in a network.
 There is no distinction between an input, hidden, or output layer. A layer's role depends on its position in the network. The first layer is the input. The last layer is the output.
 
 Each layer has a weight matrix and separate bias vector.
-They can be manually viewed or updated using getter and setter methods.
+They can be manually viewed or updated using getter and setter methods.  
+Internally, all layers have activation functions. If an activation is not assigned, the layer's activation is the `IdentityActivation`, a placeholder that does nothing.
 
 ---
 
@@ -844,7 +864,7 @@ All weights and biases are randomly initialized on the uniform interval [-1, 1].
 
 *Signature:* `Layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer")`
 
-Creates a new Layer and loads it with the provided fields. Weights and biases are randomly initialized in the uniform range [-1, 1].
+Creates a new Layer and loads it with the provided fields. All elements in the Layer's weights and biases are randomly initialized in the uniform range [-1, 1].
 
 **Parameters**
 
@@ -871,7 +891,7 @@ Returns a smart pointer to the layer's activation function.
 
 #### bias\_vector
 
-*Signature:* `Eigen::VectorXd bias_vector()`
+*Signature:* `Eigen::VectorXd bias_vector() const`
 
 Returns the layer's bias vector, as a `Eigen::VectorXd`.
 
@@ -883,7 +903,7 @@ Returns the layer's bias vector, as a `Eigen::VectorXd`.
 
 #### input\_dimension
 
-*Signature:* `int input_dimension()`
+*Signature:* `int input_dimension() const`
 
 Returns the number of inputs for the layer.
 
@@ -895,9 +915,17 @@ Returns the number of inputs for the layer.
 
 #### name
 
-*Signature:* `std::string name()`
+*Signature:* `std::string name() const`
 
-Returns the name of the layer.
+Returns the display name of the layer.
+
+The name returned is *not* the layer variable's name. The returned name is the one given in the layer's constructor.
+
+Example
+```
+CNet::Layer my_layer = Layer(1, 2, "layer name");
+std::cout << my_layer.name(); //Prints "layer name"
+```
 
 **Returns**
 
@@ -907,7 +935,7 @@ Returns the name of the layer.
 
 #### output\_dimension
 
-*Signature:* `int output_dimension()`
+*Signature:* `int output_dimension() const`
 
 Returns the number of outputs for the layer.
 
@@ -919,7 +947,7 @@ Returns the number of outputs for the layer.
 
 #### weight\_matrix
 
-*Signature:* `Eigen::MatrixXd weight_matrix()`
+*Signature:* `Eigen::MatrixXd weight_matrix() const`
 
 Returns the layer's weight matrix.
 
@@ -936,6 +964,8 @@ Returns the layer's weight matrix.
 *Signature:* `void set_activation_function(std::shared_ptr<ActivationFunction> new_activation_function)`
 
 Sets the layer's activation function to `new_activation_function`.
+
+To remove a layer's activation function, set the function to a `std::shared_ptr<IdentityActivation>`. The IdentityActivation applies the identity function f(x)=x to its inputs, effectively doing nothing.
 
 **Parameters**
 
@@ -959,7 +989,9 @@ Sets the layer's bias vector.
 
 *Signature:* `void set_name(std::string new_name)`
 
-Sets the name of the layer.
+Sets the display name of the layer.
+
+Does not change the layer's variable name.
 
 **Parameters**
 
@@ -975,7 +1007,7 @@ Sets the layer's weight matrix.
 
 **Parameters**
 
-* `new_weights` (`Eigen::MatrixXd`): New matrix of weights. Must have `{layerName}.output_dimension()` rows and `{layerName}.input_dimension()` columns.
+* `new_weights` (`Eigen::MatrixXd`): New matrix of weights. Must have `{layer}.output_dimension()` rows and `{layer}.input_dimension()` columns.
 
 ---
 
@@ -994,7 +1026,7 @@ Applies weights and adds biases.
 <details>
 <summary>Implementation Details</summary>
 
-The activation function is applied in the `forward` method of a `Network`. The `Network` (as opposed to each individual `Layer`) applies activations so it can store pre- and post-activation layer outputs for optimization.
+The `Network` (as opposed to each individual `Layer`) applies activations, so the `Network` can store pre- and post-activation layer outputs for optimization.
 
 </details>
 <br>
@@ -1013,9 +1045,11 @@ The activation function is applied in the `forward` method of a `Network`. The `
 
 #### output stream insertion (`<<`)
 
-*Signature:* `friend std::ostream& operator<<(std::ostream& os, const Layer& layer)`
+*Signature:* `friend std::ostream& operator<<(std::ostream& output_stream, const Layer& layer)`
 
-Exports `layer` to the output stream `os`, returning a new output stream with `layer` inside.
+Exports `layer` to the output stream `output_stream`, returning a new output stream with `layer` inside.
+
+Information contained in the new output stream is the layer's name, its input and output dimensions in the format "(`input dimension`, `output dimension`)", and its activation function.
 
 Usage Example
 ```
@@ -1029,7 +1063,7 @@ std::cout << layer;
 
 **Parameters**
 
-* `os` (`std::ostream&`): Output stream to write to.
+* `output_stream` (`std::ostream&`): Output stream to write to.
 * `layer` (`Layer`): Layer to export.
 
 
@@ -1049,6 +1083,15 @@ Pre-implemented concrete subclasses:
 
 * `CrossEntropy`
 * `MeanSquaredError`
+
+<br>
+<details>
+  <summary>Notice to Implementers</summary>
+  
+The file "loss_calculator.cpp" contains the method `make_loss_calculator`. If creating a new loss calculator, add the calculator's name to `make_loss_calculator`. If not, the calculator can't be stored and loaded to external files.
+
+</details>
+<br>
 
 ---
 
@@ -1136,15 +1179,29 @@ Pre-implemented concrete subclasses:
 
 Further info is in the [optimizer-specific documentation](optimizers.md).
 
+<br>
+<details>
+  <summary>Notice to Implementers</summary>
+  
+The file "optimizer.cpp" contains the method `make_optimizer`. If creating a new optimizer, add the optimizer's name to `make_optimizer`. If not, the optimizer can't be stored and loaded to external files.
+
+</details>
+<br>
 
 ---
 ---
 
-## Network Saving Methods
+## Standalone Methods
 
-Methods to save and load network configurations from external files. The entire network's state can be written to a save file, then reconstructed.
+Methods that are *not* part of a class. 
 
-These methods are standalone methods that are *not* part of a class. 
+Includes functions to load and store network configurations to an external file, and functions to create network components by name.
+
+---
+
+### Loading and Storing Networks
+
+Used to store a network's state to an external file.
 
 Loading and storing methods can be used by including "cnet/core.cpp" (they can't be used if "cnet/network.cpp" is included):
 ```
@@ -1166,9 +1223,32 @@ CNet::Network net2 = load_network_config("configuration.txt");
 
 ---
 
-### Storing Networks
+#### load\_network\_config
 
-#### store_network_config
+*Signature:* `CNet::Network load_network_config(const std::string& config_filepath)`
+
+ Returns the network whose configuration is specified in the file at `config_filepath` (including the file extension).
+
+The network that is outputted from this method is disabled.
+
+Ensure that the chosen configuration file is in the same format as that produced by the `store_network_config` method.  
+If not, this method will not work: the malformed file may trigger an assertion or cause a segfault.
+
+**Returns**
+
+* `CNet::Network`: Network containing the configuration at the specified filepath.
+
+**Parameters**
+
+* `config_filepath` (`const std::string&`): filepath to load configuration from. The file must be in the format produced by `store_network_config`.
+
+**Exceptions**
+
+* `runtime_error`: If the file at `config_filepath` does not exist, or cannot be opened. There is no check for a file in the incorrect format.
+
+---
+
+#### store\_network\_config
 
 *Signature:* `void store_network_config(const std::string config_filepath&, const CNet::Network& network)`
 
@@ -1191,30 +1271,103 @@ The default layer name is "layer", not the empty string.
 
 ---
 
-### Loading Networks
+### Creating Network Components by Name
 
-#### load_network_config
+Factory methods to create components using their names.
 
-*Signature:* `CNet::Network load_network_config(const std::string& config_filepath)`
+---
 
- Returns the network whose configuration is specified in the file at `config_filepath` (including the file extension).
+#### make\_activation\_function
 
-The network that is outputted from this method is disabled.
+*Signature:* `std::shared_ptr<ActivationFunction> make_activation_function(std::string name)`
 
-Ensure that the chosen configuration file is in the same format as that produced by the `store_network_config` method.  
-If not, this method will not work: the malformed file may trigger an assertion or cause a segfault.
+Returns a std::shared_ptr to the activation function whose name is `name`.
 
-**Parameters**
-
-* `config_filepath` (`const std::string&`): filepath to load configuration from. The file must be in the format produced by `store_network_config`.
+This function creates a new pointer.
 
 **Returns**
 
-* `CNet::Network`: Network containing the configuration at the specified filepath.
+* `std::shared_ptr`: Newly created smart pointer to the activation function given by `name`
+
+**Parameters**
+
+* `name` (`std::string`): Name of the desired activation function
 
 **Exceptions**
 
-* `runtime_error`: If the file at `config_filepath` does not exist, or cannot be opened. There is no check for a file in the incorrect format.
+* `runtime_error`: If `name` is not a recognized activation function name.
+
+<br>
+<details>
+  <summary>Implementation Details</summary>
+  
+This method is defined in the file "activation_function.cpp".
+
+</details>
+<br>
+
+---
+
+#### make\_loss\_calculator
+
+*Signature:* `std::shared_ptr<LossCalculator> make_loss_calculator(std::string name)`
+
+Returns a std::shared_ptr to the loss calculator whose name is `name`.
+
+This function creates a new pointer.
+
+**Returns**
+
+* `std::shared_ptr`: Newly created smart pointer to the loss calculator given by `name`
+
+**Parameters**
+
+* `name` (`std::string`): Name of the desired loss calculator
+
+**Exceptions**
+
+* `runtime_error`: If `name` is not a recognized loss calculator name.
+
+<br>
+<details>
+  <summary>Implementation Details</summary>
+  
+This method is defined in the file "loss_calculator.cpp".
+
+</details>
+<br>
+
+---
+
+#### make\_optimizer
+
+*Signature:* `std::shared_ptr<Optimizer> make_optimizer(std::string name, std::vector<double> hyperparameters)`
+
+Returns a std::shared_ptr to an optimizer whose name is `name` and specified by the hyperparameters `hyperparameters`.
+
+This function creates a new pointer.
+
+**Returns**
+
+* `std::shared_ptr`: Newly created smart pointer to the optimizer specified by `name` and `hyperparameters`
+
+**Parameters**
+
+* `name` (`std::string`): Name of the desired loss calculator
+* `hyperparameters` (`std::vector<double>`): Hyperparameters to initialize the new optimizer. Must be accepted by the optimizer's `set_hyperparameters` method
+
+**Exceptions**
+
+* `runtime_error`: If `name` is not a recognized optimizer name.
+
+<br>
+<details>
+  <summary>Implementation Details</summary>
+  
+This method is defined in the file "optimizer.cpp".
+
+</details>
+<br>
 
 ---
 ---

@@ -245,19 +245,19 @@ public:
 
 
     /**
-     * Returns an output stream containing `layer` added to the output stream `os`.
-     * @param os output stream to export to
+     * Exports `layer` to the output stream `output_stream`, returning a reference to `output_stream` with `layer` added.
+     * @param output_stream output stream to export to
      * @param layer layer to export
      * @return new output stream containing the layer's information inside
      */
-    friend std::ostream& operator<<(std::ostream& os, const Layer& layer);
+    friend std::ostream& operator<<(std::ostream& output_stream, const Layer& layer);
 };
 
 
-std::ostream& operator<<(std::ostream& os, const Layer& layer) {
-    os << "Layer \"" << layer.layer_name << "\" (" << layer.weights.cols() << ", " << layer.weights.rows() 
+std::ostream& operator<<(std::ostream& output_stream, const Layer& layer) {
+    output_stream << "Layer \"" << layer.layer_name << "\" (" << layer.weights.cols() << ", " << layer.weights.rows() 
         << "), activation function: " << layer.activation_fcn->name();
-    return os;
+    return output_stream;
 }
 
 

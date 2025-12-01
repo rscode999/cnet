@@ -16,7 +16,7 @@ Even if speed goals are not met, I still wanted to harness the **full power of C
 Although widely used, PyTorch has features that I found confusing. The most striking feature is that optimizers (or "criterions", in PyTorch language) are separate from the network. I thought that an optimizer, as part of the network, belongs inside the network instead of outside it. Another confusing feature is that PyTorch, and Tensorflow too, forces users to make custom classes to build networks instead of having pre-built network objects available.
 
 Using **the power of C++**, I created a neural network framework with these design goals:
-- Have the network be the central container. All functionality can be accessed through the network.
+- Have the network be the central container. All functionality can be accessed through the Network object.
 - Enable the framework to be extended using abstract classes and polymorphism
 - Use straightforward methods for network configuration
 - Implement hot-swapping capability: layers can be added, removed, or edited during training
@@ -95,13 +95,17 @@ The `remove_layer` method erases a layer at a specified index.
 
 To add a loss calculator, i.e. for Mean Squared Error:
 ```
-net.set_loss_calculator(std::make_shared<MeanSquaredError>());
+std::shared_ptr<MeanSquaredError> mse_calc = std::make_shared<MeanSquaredError>();
+net.set_loss_calculator(mse_calc);
+
+//Recommended to reset the loss calculator pointer.
+mse_calc.reset();
 ```
 
 To add an optimizer, i.e. for Stochastic Gradient Descent (SGD):
 ```
-std::shared_ptr<SGD> optimizer_ptr = std::make_shared<SGD>()
-net.set_optimizer(optimizer_ptr);
+std::shared_ptr<SGD> sgd_optimizer = std::make_shared<SGD>();
+net.set_optimizer(sgd_optimizer);
 ```
 
 Note: Both `set_loss_calculator` and `set_optimizer` use smart pointers, to enable memory-safe polymorphism.
@@ -109,15 +113,17 @@ Note: Both `set_loss_calculator` and `set_optimizer` use smart pointers, to enab
 
 To adjust the optimizer's hyperparameters, use the optimizer's methods (provided you didn't reset the optimizer's smart pointer):
 ```
-//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 4
-optimizer_ptr->set_learning_rate(0.005);
-optimizer_ptr->set_momentum_coefficient(0.9);
-optimizer_ptr->set_batch_size(4);
+//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 1
+sgd_optimizer->set_learning_rate(0.005);
+sgd_optimizer->set_momentum_coefficient(0.9);
+sgd_optimizer->set_batch_size(1);
+//Methods are unique to the SGD optimizer.
 ```
 Or, make the changes through the Network:
 ```
-//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 4
-net.set_optimizer_hyperparameters(std::vector<double>{0.005, 0.9, 4});
+//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 1
+net.set_optimizer_hyperparameters(std::vector<double>{0.005, 0.9, 1});
+//Vector's length and parameters are unique to the SGD optimizer.
 ```
 
 To check the network's configuration, feed the network directly to the standard output stream:
@@ -125,18 +131,18 @@ To check the network's configuration, feed the network directly to the standard 
 std::cout << net;
 ```
 
-To use the network, enable it:
+To train and predict with the network, enable it:
 ```
-net.enable()
+net.enable();
 ```
-The method checks these criteria:
+The `enable` method checks these criteria:
 - The network has at least 1 layer
-- The network has a defined loss calculator and optimizer 
+- The network has a loss calculator and optimizer 
 - No layer has Softmax activation, except for the final layer
 - The output dimension of each layer equals the input dimension of the next layer
 
 If any criterion is broken, the `enable` method throws the `illegal_state` exception, a subclass of `std::runtime_error`.  
-If all the criteria are met, the network's attributes cannot be changed. Attributes can still be retrieved.
+If all the criteria are met, the network cannot be mutated. Attributes can still be retrieved.
 
 To feed an input vector into the network:
 ```
@@ -148,17 +154,17 @@ input << 1, 0, 1;
 Eigen::VectorXd predictions = net.forward(input);
 ```
 
-To compute the reverse process, carrying out backpropagation using the network's optimizer:
+To compute the reverse process, training the network using the network's optimizer:
 ```
 //Create a 2D output vector containing the expected outputs from the network
 Eigen::VectorXd expected_output(2);
-input << 1, 1;
+expected_output << 1, 1;
 
 //Initiate an optimization step
 net.reverse(predictions, expected_output);
 ```
 
-Note: If the optimizer's batch size is greater than 1, changes are made only after `batch_size` samples are given to the `reverse` method. If less than `batch_size` samples are given, the network will not be changed.
+Note: For SGD optimizers, if the batch size is greater than 1, changes are made every `batch_size` samples. If the number of samples trained so far is not a multiple of `batch_size`, the network will not be changed.
 
 To evaluate performance without training:
 ```
@@ -174,7 +180,7 @@ With `network.forward(...)` or `network.forward(..., true)`, intermediate output
 
 To edit the network after enabling it:
 ```
-//Disables the network, allowing it to be changed
+//Disables the network, allowing it to be mutated
 net.disable();
 
 Add layers, remove layers, change weight/bias matrices...
@@ -234,7 +240,7 @@ Inside "cnet", there are 5 main components:
 For more details on what each class does, consult the [documentation](documentation/documentation.md).
 
 Other than "cnet", the top-level directory contains:
-- Your Eigen 3 installation, if your configured your repo correctly
+- Your Eigen 3 installation, if you put Eigen in the correct location
 - `documentation/`, a directory containing detailed class and method documentation
 - `main.cpp`, for users to write their code
 - `tests.cpp`, containing pre-built tests of network functionality

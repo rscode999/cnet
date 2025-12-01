@@ -429,7 +429,7 @@ Effective 2025-09-27, code must compile under the following settings:
 If, under these settings, the code does not compile, the offending changes must be rejected.
 
 ## Final Remarks
-No one involved with this project may make references to K-Pop Demon Hunters.
+No contributors, viewers, or users may make references to K-Pop Demon Hunters.
 
 You agree that the "6 7" meme is cringe. You agree not to cite or make references to the "6 7" meme.
 
