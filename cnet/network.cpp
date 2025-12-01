@@ -14,7 +14,7 @@ public:
      * Creates a new exception with `error_message` as the error message
      * @param error_message the error message to display upon throw
      */
-    illegal_state(std::string error_message) : runtime_error(error_message) {
+    illegal_state(const std::string& error_message) : runtime_error(error_message) {
     }
 
 };
@@ -60,7 +60,7 @@ private:
 
 
     /**
-     * Stores the input std::vector given to the network
+     * Stores the input vector given to the network
      * 
      * Used in backpropagation.
      */
@@ -111,7 +111,7 @@ public:
     //GETTERS
 
     /**
-     * Returns a deep copy of the bias std::vector in layer `layer_number`.
+     * Returns a deep copy of the bias vector in layer `layer_number`.
      * 
      * Layers use 0-based indexing. The first layer is at layer number 0.
      * 
@@ -494,13 +494,13 @@ public:
      * The input layer's number is 0. The first hidden layer's number is 1.
      * 
      * @param layer_number which layer's biases to set (0-based indexing). Must be between 0 and {networkName}.layer_count()-1, inclusive on both ends
-     * @param new_biases new bias std::vector to set. Must have {selected layer}.output_dimension() rows
+     * @param new_biases new bias vector to set. Must have {selected layer}.output_dimension() rows
      * @throws `illegal_state` if the network is enabled
      */
     void set_biases_at(int layer_number, Eigen::VectorXd new_biases) {
-        assert((layer_number>=0 && layer_number<(int)layers.size() && "For changing bias std::vectors, layer number must be between 0 and (number of layers)-1"));
-        assert((new_biases.rows() == layers[layer_number].output_dimension() && "New bias std::vector's number of rows must equal the selected layer's output dimension"));
-        assert((new_biases.cols() == 1 && "New biases must be a column std::vector"));
+        assert((layer_number>=0 && layer_number<(int)layers.size() && "When changing bias vectors, layer number must be between 0 and (network's number of layers)-1"));
+        assert((new_biases.rows() == layers[layer_number].output_dimension() && "New bias vector's number of rows must equal the selected layer's output dimension"));
+        assert((new_biases.cols() == 1 && "New biases must be a column vector"));
 
         if(enabled) {
             throw illegal_state("Cannot manually set bias vectors while the network is enabled");
@@ -588,7 +588,7 @@ public:
      * @throws `illegal_state` if the network is enabled
      */
     void set_weights_at(int layer_number, Eigen::MatrixXd new_weights) {
-        assert((layer_number>=0 && layer_number<(int)layers.size() && "Layer number must be between 0 and (number of layers)-1"));
+        assert((layer_number>=0 && layer_number<(int)layers.size() && "When setting weight matrix, layer number must be between 0 and (network's number of layers)-1"));
         assert((new_weights.rows() == layers[layer_number].output_dimension() && "New weight matrix's row count must equal the layer's output dimension"));
         assert((new_weights.cols() == layers[layer_number].input_dimension() && "New weight matrix's column count must equal the layer's input dimension"));
     
@@ -622,12 +622,12 @@ public:
      * @throws `illegal_state` if the network is not enabled
      */
     Eigen::VectorXd forward(const Eigen::VectorXd& input, bool training = true) {
-        assert((input.cols() == 1 && "Input to forward operation must be a column std::vector"));
+        assert((input.cols() == 1 && "Input to forward operation must be a column vector"));
         assert((input.rows() == input_dimension() && "Input to forward operation must have same dimension as the network's input"));
         
         //Enable check
         if(!enabled) {
-            throw illegal_state("Forward operation requires the network to be enabled");
+            throw illegal_state("Network forward and predict operation requires the network to be enabled");
         }
 
         if(training) {
@@ -666,7 +666,7 @@ public:
      * @throws `illegal_state` if the network is not enabled
      */
     Eigen::VectorXd predict(const Eigen::VectorXd& input) {
-        assert((input.cols() == 1 && "Input to prediction must be a column std::vector"));
+        assert((input.cols() == 1 && "Input to network prediction must be a column vector"));
         assert((input.rows() == input_dimension() && "Input to prediction must have same dimension as the network's input"));
 
         return forward(input, false);
@@ -685,8 +685,8 @@ public:
      * @throws `illegal_state` if the network is not enabled, or a feed-forward training operation was not done
      */
     void reverse(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals) {
-        assert((predictions.cols() == 1 && "Reverse process predictions must be a column std::vector"));
-        assert((actuals.cols() == 1 && "Reverse process actuals must be a column std::vector"));
+        assert((predictions.cols() == 1 && "Reverse process predictions must be a column vector"));
+        assert((actuals.cols() == 1 && "Reverse process actuals must be a column vector"));
         assert((predictions.rows() == output_dimension() && "Reverse process predictions length must equal network's output dimension"));
         assert((actuals.rows() == output_dimension() && "Reverse process actuals length must equal network's output dimension"));
 
@@ -759,36 +759,43 @@ public:
 
 
 
-std::ostream& operator<<(std::ostream& os, const Network& network) {
+std::ostream& operator<<(std::ostream& output_stream, const Network& network) {
     
     //enabled or disabled, layer count
-    os << "Network (" << (network.enabled ? "enabled" : "disabled") << "), ";
-    os << network.layer_count() << " layers, ";
+    output_stream << "Network (" << (network.enabled ? "enabled" : "disabled") << "); ";
+    output_stream << network.layer_count() << " layers, ";
 
     //loss calculator
     if(network.loss_calc) {
-        os << network.loss_calc->name() << " loss, ";
+        output_stream << network.loss_calc->name() << " loss; ";
     }
     else {
-        os << "no defined loss, ";
+        output_stream << "no defined loss; ";
     }
 
     //optimizer
     if(network.optim) {
-        os << network.optim->name() << " optimizer";
+        output_stream << network.optim->name() << " optimizer (";
+
+        for(int h = 0; h < (int)network.optim->hyperparameters().size(); h++) {
+            output_stream << network.optim->hyperparameters() [h];
+            
+            output_stream << ((h < (int)network.optim->hyperparameters().size() - 1) ? ", " : ")");
+        }
+        
     }
     else {
-        os << "no defined optimizer";
+        output_stream << "no defined optimizer";
     }
 
     //layers
     if(network.layers.size() > 0) {
-        os << ":\n";
+        output_stream << "\n";
         for(Layer l : network.layers) {
-            os << l << "\n";
+            output_stream << l << "\n";
         }
     }
-    return os;
+    return output_stream;
 }
 
 

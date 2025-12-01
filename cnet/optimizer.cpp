@@ -70,14 +70,14 @@ private:
     virtual void clear_state() = 0;
 
     /**
-     * Updates `layers` in-place using the optimizer's method, using calculated gradients.
+     * Updates `layers` in-place using the optimizer, using calculated gradients.
      * 
      * This is a private method. Not intended to be called by a user.
      * 
-     * Mutates `layers`.
+     * Mutates `layers` and this Optimizer object.
      * 
      * @param layers std::vector of layers to optimize
-     * @param initial_input value that was first given to the network
+     * @param initial_input input value of the network
      * @param intermediate_outputs outputs of each layer before and after the layer's activation function is applied
      * @param predictions the output of the network for `initial_input`
      * @param actuals what the network should predict for `initial_input`
@@ -129,8 +129,10 @@ private:
 
     /**
      * Number of samples to train per batch. Must be positive.
+     * 
+     * The name avoids a conflict with the method `batch_size`.
      */
-    int batch_size;
+    int batch_size_;
 
     /**
      * Learning rate, dictating the optimization step size. Must be positive.
@@ -209,7 +211,7 @@ public:
         
         learn_rate = learning_rate;
         momentum_coeff = momentum_coefficient;
-        this->batch_size = batch_size;
+        batch_size_ = batch_size;
         n_samples_trained = 0;
     }
 
@@ -219,10 +221,33 @@ public:
     //GETTERS
 
     /**
+     * @return optimizer's batch size
+     */
+    int batch_size() const {
+        return batch_size_;
+    }
+
+    /**
      * @return vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), batch size (index 2)
      */
     std::vector<double> hyperparameters() const override {
-        return {learn_rate, momentum_coeff, (double)batch_size};
+        return {learn_rate, momentum_coeff, (double)batch_size_};
+    }
+
+
+    /**
+     * @return optimizer's learning rate
+     */
+    double learning_rate() const {
+        return learn_rate;
+    }
+
+
+    /**
+     * @return optimizer's momentum coefficient
+     */
+    double momentum_coefficient() const {
+        return momentum_coeff;
     }
 
     
@@ -239,7 +264,7 @@ public:
      */
     std::string to_string() const override {
         return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff) 
-            + ", batch size=" + std::to_string(batch_size);
+            + ", batch size=" + std::to_string(batch_size_);
     }
 
 
@@ -255,10 +280,10 @@ public:
      * @param new_batch_size new batch size. Must be positive.
      */
     void set_batch_size(int new_batch_size) {
-        assert((new_batch_size>0 && "New batch size must be positive"));
+        assert((new_batch_size>0 && "SGD new batch size must be positive"));
 
         clear_state();
-        batch_size = new_batch_size;
+        batch_size_ = new_batch_size;
     }
 
 
@@ -266,9 +291,9 @@ public:
      * Sets the SGD optimizer's hyperparameters to `hyperparameters`.
      * Index 0 contains the new learning rate. Index 1 contains the new momentum coefficient. Index 2 contains the new batch size.
      * 
-     * Index 0 must be positive. Index 1 must be non-negative. Index 2 must be positive.
+     * If the batch size is changed, the optimizer's training data will be reset.
      * 
-     * @param hyperparameters vector of new hyperparameters. Must be of length 3, where index 0 is positive, index 1 is non-negative, and index 2 is positive
+     * @param hyperparameters vector of new hyperparameters. Must be of length 3, where index 0 is positive, index 1 is non-negative, and index 2 (rounded down to the nearest integer) is positive
      */
     void set_hyperparameters(const std::vector<double>& hyperparameters) override {
         assert((hyperparameters.size() == 3 && "SGD optimizer hyperparameter list must be of length 3"));
@@ -276,15 +301,34 @@ public:
         assert((hyperparameters[1]>=0 && "SGD hyperparameter index 1 (new momentum coefficient) must be positive"));
         assert(((int)hyperparameters[2]>0 && "SGD hyperparameter index 2 (new batch size), as an integer, must be positive"));
 
-        if(batch_size != (int)hyperparameters[2]) {
+        if(batch_size_ != (int)hyperparameters[2]) {
             clear_state();
         }
 
         learn_rate = hyperparameters[0];
         momentum_coeff = hyperparameters[1];
-        batch_size = (int)hyperparameters[2];
+        batch_size_ = (int)hyperparameters[2];
     }
 
+
+    /**
+     * Sets the optimizer's learning rate to `new_learning_rate`.
+     * @param new_learning_rate new rate. Must be positive.
+     */
+    void set_learning_rate(double new_learning_rate) {
+        assert(new_learning_rate > 0 && "SGD new learning rate must be positive");
+        learn_rate = new_learning_rate;
+    }
+
+
+    /**
+     * Sets the optimizer's momentum coefficient to `new_momentum_coefficient`.
+     * @param new_learning_rate new momentum coefficient. Cannot be negative.
+     */
+    void set_momentum_coefficient(double new_momentum_coefficient) {
+        assert(new_momentum_coefficient >= 0 && "SGD new momentum coefficient must be non-negative");
+        momentum_coeff = new_momentum_coefficient;
+    }
 
 private:
 
@@ -305,7 +349,9 @@ private:
 
 
     /**
-     * Updates `layers` using SGD optimization
+     * Updates `layers` using SGD optimization.
+     * 
+     * Mutates `layers`.
      * 
      * @param layers std::vector of layers to optimize
      * @param initial_input value that was first given to the network
@@ -425,7 +471,7 @@ private:
 
 
         //update layer weights and biases, if enough training examples are done already
-        if(n_samples_trained == batch_size-1) {
+        if(n_samples_trained == batch_size_-1) {
             //Counts current layer
             int current_layer = layers.size()-1;
             //Iterates through weights
@@ -435,8 +481,8 @@ private:
 
             while(weight_iterator != total_weights.rend()) {
                 //divide average weights and biases by batch size
-                Eigen::MatrixXd average_weights = *weight_iterator * (1.0 / batch_size);
-                Eigen::VectorXd average_biases = *bias_iterator * (1.0 / batch_size);
+                Eigen::MatrixXd average_weights = *weight_iterator * (1.0 / batch_size_);
+                Eigen::VectorXd average_biases = *bias_iterator * (1.0 / batch_size_);
 
                 //get current momentums for weights and biases
                 Eigen::MatrixXd& weight_velocity = momentum_cache[current_layer].weight_velocity;
@@ -459,7 +505,7 @@ private:
 
         //Update number of samples trained
         n_samples_trained++;
-        if(n_samples_trained >= batch_size) {
+        if(n_samples_trained >= batch_size_) {
             total_biases.clear();
             total_weights.clear();
             n_samples_trained = 0;
@@ -471,13 +517,14 @@ private:
 
 
 /**
- * Returns a std::shared_ptr to the optimizer whose name is `name`.
+ * Returns a std::shared_ptr to the optimizer whose name is `name` (i.e. "sgd") and specified by the hyperparameters given in `hyperparameters`.
  * 
  * @param name name of desired optimizer
+ * @param hyperparameters list of hyperparameters for the new optimizer. Must be accepted by the optimizer's `set_hyperparameters` method
  * @return optimizer with matching name
  * @throws `runtime_error` if no matching optimizer name is found
  */
-std::shared_ptr<Optimizer> make_optimizer(std::string name, std::vector<double> hyperparameters) {
+std::shared_ptr<Optimizer> make_optimizer(const std::string& name, const std::vector<double>& hyperparameters) {
     using namespace std;
 
     if(name == "sgd") {

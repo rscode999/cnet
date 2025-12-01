@@ -27,14 +27,14 @@ public:
      * @param input value to calculate 
      * @return copy of `input` after applying this activation function element-wise
      */
-    virtual Eigen::VectorXd compute(const Eigen::VectorXd& input) = 0;
+    virtual Eigen::VectorXd compute(const Eigen::VectorXd& input) const = 0;
 
     /**
      * Returns the derivative output of the given activation function
      * @param input value to calculate 
      * @return the activation function's derivative applied element-wise to `input`
      */
-    virtual Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) = 0;
+    virtual Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const = 0;
 
     /**
      * @return unique identifying string for the activation function.
@@ -42,7 +42,7 @@ public:
      * 
      * Typically the activation function's name in all lowercase.
      */
-    virtual std::string name()  {
+    virtual std::string name() const {
         return "none";
     };
 
@@ -53,7 +53,7 @@ public:
      * 
      * If not overridden, returns `false`.
      */
-    virtual bool using_pre_activation() {
+    virtual bool using_pre_activation() const {
         return false;
     }
 
@@ -90,7 +90,7 @@ public:
      * @param input input value
      * @return the input value as itself
      */
-    Eigen::VectorXd compute(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute(const Eigen::VectorXd& input) const override {
         Eigen::VectorXd output = input;
         return output;
     }
@@ -100,7 +100,7 @@ public:
      * @param input input value
      * @return Eigen::VectorXd of 1.0
      */
-    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const override {
         return Eigen::VectorXd::Constant(input.size(), 1.0);
     }
 
@@ -128,7 +128,7 @@ public:
      * @param input The input values
      * @return ReLU applied to the input element-wise
      */
-    Eigen::VectorXd compute(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute(const Eigen::VectorXd& input) const override {
         return input.unaryExpr([](double x) {
                 return (x<0) ? 0.0 : x;
             }
@@ -143,7 +143,7 @@ public:
      * @param input The input values
      * @return for each element, 1 if `input` >= 0, else 0.
      */
-    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const override {
         return input.unaryExpr([](double x) {
                 return (x<0) ? 0.0 : 1.0;
             }
@@ -153,7 +153,7 @@ public:
     /**
      * @return `"relu"`, the function's unique identifier.
      */
-    std::string name() override {
+    std::string name() const override {
         return "relu";
     }
 
@@ -161,7 +161,7 @@ public:
      * @return the Boolean value `true`.
      * In backpropagation, ReLU is best applied before activations are used.
      */
-    bool using_pre_activation() override {
+    bool using_pre_activation() const override {
         return true;
     }
 };
@@ -185,7 +185,7 @@ public:
      * @param input inputs to compute
      * @return Eigen::VectorXd with the sigmoid function applied
      */
-    Eigen::VectorXd compute(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute(const Eigen::VectorXd& input) const override {
         return input.unaryExpr([](double x) {
             return 1.0 / (1.0 + exp(-x));
         });
@@ -196,12 +196,12 @@ public:
      * @param input inputs to compute
      * @return Eigen::VectorXd with the sigmoid function's derivative applied
      */
-    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const override {
         Eigen::VectorXd sig = compute(input);
         return sig.array() * (1.0 - sig.array());
     }
 
-    std::string name() override {
+    std::string name() const override {
         return "sigmoid";
     }
 
@@ -209,7 +209,7 @@ public:
      * @return `true`.
      * This implementation of the Sigmoid derivative should be taken before activation functions are applied.
      */
-    bool using_pre_activation() override {
+    bool using_pre_activation() const override {
         return true;
     }
 };
@@ -233,7 +233,7 @@ public:
     /**
      * @return Softmax computed element-wise over the entire vector
      */
-    Eigen::VectorXd compute(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute(const Eigen::VectorXd& input) const override {
         Eigen::VectorXd shifted = input.array() - input.maxCoeff();  // for numerical stability
         Eigen::VectorXd exps = shifted.array().exp();
         double sum = exps.sum();
@@ -243,7 +243,7 @@ public:
     /**
      * Should not be used.
      */
-    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) override {
+    Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const override {
         assert((false && "Should not compute softmax derivative element-wise"));
         throw std::exception();
     }
@@ -251,7 +251,7 @@ public:
     /**
      * @return `"softmax"`, the identifier for a Softmax activation function
      */
-    std::string name() override {
+    std::string name() const override {
         return "softmax";
     }
 
@@ -265,7 +265,7 @@ public:
  * @return activation function with matching name
  * @throws `runtime_error` if no matching activation function name is found
  */
-std::shared_ptr<ActivationFunction> make_activation_function(std::string name) {
+std::shared_ptr<ActivationFunction> make_activation_function(const std::string& name) {
     using namespace std;
 
     if(name == "none") {

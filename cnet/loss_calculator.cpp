@@ -51,12 +51,15 @@ public:
 
 /**
  * Calculates cross-entropy loss.
- * 
- * When used with Softmax activation in backpropagation,
- * should be treated as a special case.
  */
 class CrossEntropy : public LossCalculator {
+/*
+When used with Softmax activation in backpropagation,
+should be treated as a special case.
+*/
+
 public:
+
     /**
      * Creates a new Cross Entropy loss calculator
      */
@@ -190,7 +193,7 @@ public:
  * @return loss calculator with matching name
  * @throws `runtime_error` if no matching loss calculator name is found
  */
-std::shared_ptr<LossCalculator> make_loss_calculator(std::string name) {
+std::shared_ptr<LossCalculator> make_loss_calculator(const std::string& name) {
     using namespace std;
 
     if(name == "cross_entropy") {
