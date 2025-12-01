@@ -15,6 +15,15 @@ Note: Only a concrete subclass of Optimizer may be created. The Optimizer is an 
 Using an external smart pointer, an Optimizer's hyperparameters can be changed or retrieved.  
 Setting hyperparameters can also be done through the Network, with the Network's method `set_optimizer_hyperparameters`.
 
+<br>
+<details>
+  <summary>Notice to Implementers</summary>
+  
+The file "optimizer.cpp" contains the method `make_optimizer`. If creating a new optimizer, add the optimizer's name to `make_optimizer`. If not, the optimizer can't be stored and loaded to external files.
+
+</details>
+<br>
+
 ## Table of Contents
 
 - [Shared Virtual Methods](#shared-virtual-methods)
@@ -36,6 +45,35 @@ Pre-implemented concrete subclasses:
 The Optimizer is an abstract class. A user cannot directly instantiate an Optimizer. Only its concrete subclasses may be created.
 
 All Optimizers share the virtual methods below. They can be called on any Optimizer instance.
+
+<details>
+<summary>Implementation Details</summary>
+
+Optimizers have a private method, `step`, with the following signature:
+```
+virtual void step(
+    std::vector<Layer>& layers, 
+    const Eigen::VectorXd& initial_input,
+    const std::vector<LayerCache>& intermediate_outputs,
+    const Eigen::VectorXd& predictions,
+    const Eigen::VectorXd& actuals,
+    const std::shared_ptr<LossCalculator> loss_calculator
+)
+```
+Parameter descriptions:
+* `layers` std::vector of layers to optimize
+* `initial_input` input value of the network
+* `intermediate_outputs` outputs of each layer before and after the layer's activation function is applied (the `LayerCache` struct, defined in the file "layer.cpp", contains two Eigen::VectorXd's: `pre_activation` and `post_activation`)
+* `predictions` the output of the network for `initial_input`
+* `actuals` what the network should predict for `initial_input`
+* `loss_calculator` smart pointer to loss calculator object
+
+This method mutates its `layers` parameter.
+
+When using its `reverse` method, a Network internally calls its optimizer's `step` method.
+
+</details>
+<br>
 
 ---
 
@@ -65,7 +103,7 @@ Example: `SGD`'s name is `"sgd"`.
 <details>
 <summary>Implementation Details</summary>
 
-If not overridden, this method returns "optimizer".
+If not overridden, this method returns the string "optimizer".
 
 </details>
 <br>
@@ -142,7 +180,7 @@ Constructs a new SGD optimizer using the given hyperparameters.
 **Parameters**
 
 * `learning_rate` (`double`): Learning rate, which determines the step size and speed of optimization. Must be positive. Default: 0.01
-* `momentum_coefficient` (`double`): Momentum coefficient to accelerate convergence and dampen oscillations. Cannot be negative. Default: 0
+* `momentum_coefficient` (`double`): Momentum coefficient to accelerate convergence or dampen oscillations. Cannot be negative. Default: 0
 * `batch_size` (`int`): Number of samples to average over during training. Must be positive. Default: 1
 
 ---
@@ -150,7 +188,21 @@ Constructs a new SGD optimizer using the given hyperparameters.
 
 ### Getters
 
+#### batch\_size
+
+*Signature*: `int batch_size() const`
+
+Returns the batch size used by the optimizer.
+
+**Returns**
+
+* `int`: The SGD optimizer's current batch size.
+
+---
+
 #### hyperparameters
+
+*Signature*: `std::vector<double> hyperparameters() const override`
 
 Returns a std::vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), and batch size (index 2).
 
@@ -162,7 +214,7 @@ Returns a std::vector of 3 hyperparameters: learning rate (index 0), momentum co
 
 #### learning\_rate
 
-*Signature*: `double learning_rate()`
+*Signature*: `double learning_rate() const`
 
 Returns the learning rate used by the optimizer.
 
@@ -174,7 +226,7 @@ Returns the learning rate used by the optimizer.
 
 #### momentum\_coefficient
 
-*Signature*: `double momentum_coefficient()`
+*Signature*: `double momentum_coefficient() const`
 
 Returns the momentum coefficient used by the optimizer.
 
@@ -186,7 +238,7 @@ Returns the momentum coefficient used by the optimizer.
 
 #### name
 
-*Signature*: `std::string name() override`
+*Signature*: `std::string name() const override`
 
 Returns `"sgd"`, the identifying string of the SGD optimizer.
 
@@ -198,7 +250,7 @@ Returns `"sgd"`, the identifying string of the SGD optimizer.
 
 #### to\_string
 
-*Signature*: `virtual std::string to_string()`
+*Signature*: `std::string to_string() const override`
 
 Returns a string containing detailed information about the optimizer's state.
 

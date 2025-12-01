@@ -190,7 +190,7 @@ public:
  * @return loss calculator with matching name
  * @throws `runtime_error` if no matching loss calculator name is found
  */
-std::shared_ptr<LossCalculator> make_loss_calculator(std::string name) {
+std::shared_ptr<LossCalculator> make_loss_calculator(const std::string& name) {
     using namespace std;
 
     if(name == "cross_entropy") {
