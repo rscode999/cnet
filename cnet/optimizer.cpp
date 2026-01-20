@@ -128,6 +128,22 @@ private:
 
 
     /**
+     * Utility struct to store changes in weights and biases
+     */
+    struct Gradients {
+        /**
+         * Changes in weight matrices
+         */
+        std::vector<Eigen::MatrixXd> dW;
+
+        /**
+         * Changes in bias vectors
+         */
+        std::vector<Eigen::VectorXd> dB;
+    };
+
+
+    /**
      * Number of samples to train per batch. Must be positive.
      * 
      * The name avoids a conflict with the method `batch_size`.
@@ -186,7 +202,7 @@ private:
      * @param loss_grad the gradient of the loss with respect to the softmax output
      * @return Jacobian from `softmax_output` * `loss_grad`
      */
-    Eigen::VectorXd softmax_jacobian_vector_product(const Eigen::VectorXd& softmax_out, const Eigen::VectorXd& loss_grad) {
+    Eigen::VectorXd softmax_jacobian_vector_product(const Eigen::VectorXd& softmax_out, const Eigen::VectorXd& loss_grad) const {
         double dot = softmax_out.dot(loss_grad);
         return softmax_out.array() * (loss_grad.array() - dot);
     }
@@ -349,9 +365,7 @@ private:
 
 
     /**
-     * Updates `layers` using SGD optimization.
-     * 
-     * Mutates `layers`.
+     * Returns changes in the gradients and biases of `layers`, based on the given inputs.
      * 
      * @param layers std::vector of layers to optimize
      * @param initial_input value that was first given to the network
@@ -359,11 +373,15 @@ private:
      * @param predictions the output of the network for `initial_input`
      * @param actuals what the network should predict for `initial_input`
      * @param loss_calculator smart pointer to loss calculator object
+     * @return gradient and bias changes
      */
-    void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
-        const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) override {
-            
-        //The entire network is not passed in. This allows one-way friend access
+    Gradients compute_gradients(
+        const std::vector<Layer>& layers,
+        const Eigen::VectorXd& initial_input, 
+        const std::vector<LayerCache>& intermediate_outputs,
+        const Eigen::VectorXd& predictions, 
+        const Eigen::VectorXd& actuals,
+        const std::shared_ptr<LossCalculator>& loss_calculator) const {
         
         assert((predictions.cols() == 1 && "Predicted values must be a column vector"));
         assert((predictions.rows() == layers.back().output_dimension() && "Predicted value vector must have dimension equal to the network's output dimension"));
@@ -373,12 +391,16 @@ private:
         //Idiot check
         assert(intermediate_outputs.size() == layers.size());
 
-        //Initialize momentums to all 0's (if not already initialized)
-        if(momentum_cache.size() == 0) {
-            for(Layer& layer : layers) {
-                momentum_cache.emplace_back(layer.output_dimension(), layer.input_dimension(), layer.output_dimension());
-            }
-        }
+        Gradients output;
+        output.dB.resize(layers.size());
+        output.dW.resize(layers.size());
+
+        // //Initialize momentums to all 0's (if not already initialized)
+        // if(momentum_cache.size() == 0) {
+        //     for(const Layer& layer : layers) {
+        //         output.momentums.emplace_back(layer.output_dimension(), layer.input_dimension(), layer.output_dimension());
+        //     }
+        // }
 
 
         Eigen::VectorXd delta;
@@ -412,107 +434,88 @@ private:
                 delta = delta.cwiseProduct(final_activation->compute_derivative(intermediate_outputs.back().post_activation));
             }
         }
-                
-   
-        //update remaining layers
-        auto biases_reverse_iterator = total_biases.rbegin();
-        auto weights_reverse_iterator = total_weights.rbegin();
 
-        for(int l = layers.size()-1; l >= 0; l--) {
+
+        //Compute for the other layers
+        for(int l = static_cast<int>(layers.size()) - 1; l >= 0; l--) {
+
             //Get original post-activation of the previous layer
             Eigen::VectorXd previous_post_activation = (l > 0) 
                 ? intermediate_outputs[l-1].post_activation
                 : initial_input;
 
-            //propagate delta
-            Eigen::VectorXd new_delta;
-            if(l > 0) {
-                Eigen::MatrixXd current_weights = layers[l].weight_matrix();
 
-                Eigen::VectorXd current_intermediate_output = layers[l-1].activation_function()->using_pre_activation()
+            // Weight gradient = delta * previous activation transposed
+            output.dW[l] = delta * previous_post_activation.transpose();
+            // Bias gradient = delta
+            output.dB[l] = delta;
+
+            //propagate delta
+            if (l > 0) {
+                // Backpropagate delta to previous layer
+                delta = layers[l].weight_matrix().transpose().eval() * delta;
+
+                // Apply hidden layer activation derivative
+                const auto& act_prev = layers[l-1].activation_function();
+                const auto& z_prev = act_prev->using_pre_activation()
                     ? intermediate_outputs[l-1].pre_activation
                     : intermediate_outputs[l-1].post_activation;
-                
-                //apply previous layer's activation function derivative to each intermediate output element
-                current_intermediate_output = layers[l-1].activation_function()->compute_derivative(current_intermediate_output);
-
-                /*
-                update new delta with product of current weights and previous intermediate output 
-                (with activation deriv. applied to each element)
-                */
-                new_delta = (current_weights.transpose() * delta).cwiseProduct(current_intermediate_output);
-            }
-                
-            //weight gradient = outer product of delta and previous layer's post activation outputs
-            Eigen::MatrixXd weight_grad = delta * previous_post_activation.transpose();
-            //bias gradient = delta as itself
-            Eigen::VectorXd bias_grad   = delta;
-
-            //Put the gradients in the storage, if none are in there yet
-            if(n_samples_trained == 0) {
-                total_weights.push_front(weight_grad);
-                total_biases.push_front(bias_grad);
-            }
-            //If there are gradients, add to the existing gradients
-            else {
-                *biases_reverse_iterator = *biases_reverse_iterator + bias_grad;
-                *weights_reverse_iterator = *weights_reverse_iterator + weight_grad;
-            }
-            
-            //update delta
-            if(l > 0) {
-                delta = new_delta;
-            }
-
-            //move the iterators backward
-            biases_reverse_iterator++;
-            weights_reverse_iterator++;
-        }
-
-
-        //update layer weights and biases, if enough training examples are done already
-        if(n_samples_trained == batch_size_-1) {
-            //Counts current layer
-            int current_layer = layers.size()-1;
-            //Iterates through weights
-            auto weight_iterator = total_weights.rbegin();
-            //Iterates through biases
-            auto bias_iterator = total_biases.rbegin();
-
-            while(weight_iterator != total_weights.rend()) {
-                //divide average weights and biases by batch size
-                Eigen::MatrixXd average_weights = *weight_iterator * (1.0 / batch_size_);
-                Eigen::VectorXd average_biases = *bias_iterator * (1.0 / batch_size_);
-
-                //get current momentums for weights and biases
-                Eigen::MatrixXd& weight_velocity = momentum_cache[current_layer].weight_velocity;
-                Eigen::VectorXd& bias_velocity   = momentum_cache[current_layer].bias_velocity;
-
-                //update weight and bias velocities
-                weight_velocity = momentum_coeff * weight_velocity - learn_rate * average_weights;
-                bias_velocity   = momentum_coeff * bias_velocity - learn_rate * average_biases;
-                //THESE ARE NOT THE GRADIENTS!
-                
-                //update the layers
-                layers[current_layer].set_weight_matrix(layers[current_layer].weight_matrix() + weight_velocity);
-                layers[current_layer].set_bias_vector((layers[current_layer].bias_vector() + bias_velocity).eval());
-                
-                weight_iterator++;
-                bias_iterator++;
-                current_layer--;
+                delta = delta.cwiseProduct(act_prev->compute_derivative(z_prev));
             }
         }
 
-        //Update number of samples trained
-        n_samples_trained++;
-        if(n_samples_trained >= batch_size_) {
-            total_biases.clear();
-            total_weights.clear();
-            n_samples_trained = 0;
-        }
+        return output;
     }
 
+
+
+    void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
+        const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) override {
+
+            throw std::runtime_error("NOT YET IMPLEMENTED!");
+    }
 };
+
+        // //update layer weights and biases, if enough training examples are done already
+        // if(n_samples_trained == batch_size_-1) {
+        //     //Counts current layer
+        //     int current_layer = layers.size()-1;
+        //     //Iterates through weights
+        //     auto weight_iterator = total_weights.rbegin();
+        //     //Iterates through biases
+        //     auto bias_iterator = total_biases.rbegin();
+
+        //     while(weight_iterator != total_weights.rend()) {
+        //         //divide average weights and biases by batch size
+        //         Eigen::MatrixXd average_weights = *weight_iterator * (1.0 / batch_size_);
+        //         Eigen::VectorXd average_biases = *bias_iterator * (1.0 / batch_size_);
+
+        //         //get current momentums for weights and biases
+        //         Eigen::MatrixXd& weight_velocity = output.momentums[current_layer].weight_velocity;
+        //         Eigen::VectorXd& bias_velocity   = output.momentums[current_layer].bias_velocity;
+
+        //         //update weight and bias velocities
+        //         weight_velocity = momentum_coeff * weight_velocity - learn_rate * average_weights;
+        //         bias_velocity   = momentum_coeff * bias_velocity - learn_rate * average_biases;
+        //         //THESE ARE NOT THE GRADIENTS!
+                
+        //         //update the layers
+        //         output.dW.push_back(layers[current_layer].weight_matrix() + weight_velocity);
+        //         output.dB.push_back((layers[current_layer].bias_vector() + bias_velocity).eval());
+                
+        //         weight_iterator++;
+        //         bias_iterator++;
+        //         current_layer--;
+        //     }
+        // }
+
+        // //Update number of samples trained
+        // n_samples_trained++;
+        // if(n_samples_trained >= batch_size_) {
+        //     total_biases.clear();
+        //     total_weights.clear();
+        //     n_samples_trained = 0;
+        // }
 
 
 
