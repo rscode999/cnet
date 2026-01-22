@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 
+#include <iostream>
 
 
 namespace CNet {
@@ -113,22 +114,11 @@ friend class Network;
 
 private:
 
-    /**
-     * Private struct to store weight and bias velocities for momentum SGD
-     */
-    struct MomentumCache {
-        Eigen::MatrixXd weight_velocity;
-        Eigen::VectorXd bias_velocity;
-        
-        MomentumCache(int weight_rows, int weight_cols, int bias_size) {
-            weight_velocity = Eigen::MatrixXd::Zero(weight_rows, weight_cols);
-            bias_velocity = Eigen::VectorXd::Zero(bias_size);
-        }
-    };
-
 
     /**
-     * Utility struct to store changes in weights and biases
+     * Utility struct to store changes in weights and biases.
+     * 
+     * Changes are stored as two `std::vector`s: `dW` (weights) and `dB` (biases)
      */
     struct Gradients {
         /**
@@ -143,12 +133,6 @@ private:
     };
 
 
-    /**
-     * Number of samples to train per batch. Must be positive.
-     * 
-     * The name avoids a conflict with the method `batch_size`.
-     */
-    int batch_size_;
 
     /**
      * Learning rate, dictating the optimization step size. Must be positive.
@@ -159,6 +143,11 @@ private:
      * Amount of momentum to use. Must be non-negative.
      */
     double momentum_coeff;
+
+    /**
+     * Number of samples to train per batch. Must be positive.
+     */
+    int n_samples_per_batch;
 
     /**
      * Number of samples trained so far. 
@@ -183,11 +172,15 @@ private:
      */
     std::list<Eigen::MatrixXd> total_weights;
 
+    /**
+     * Bias velocities for momentum SGD
+     */
+    std::vector<Eigen::VectorXd> velocity_biases;
 
     /**
-     * Holds previous matrices and vectors used in backpropagation. For momentum.
+     * Weight velocities for momentum SGD
      */
-    std::vector<MomentumCache> momentum_cache;
+    std::vector<Eigen::MatrixXd> velocity_weights;
 
 
     /**
@@ -227,7 +220,7 @@ public:
         
         learn_rate = learning_rate;
         momentum_coeff = momentum_coefficient;
-        batch_size_ = batch_size;
+        n_samples_per_batch = batch_size;
         n_samples_trained = 0;
     }
 
@@ -240,14 +233,14 @@ public:
      * @return optimizer's batch size
      */
     int batch_size() const {
-        return batch_size_;
+        return n_samples_per_batch;
     }
 
     /**
      * @return vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), batch size (index 2)
      */
     std::vector<double> hyperparameters() const override {
-        return {learn_rate, momentum_coeff, (double)batch_size_};
+        return {learn_rate, momentum_coeff, (double)n_samples_per_batch};
     }
 
 
@@ -280,7 +273,7 @@ public:
      */
     std::string to_string() const override {
         return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff) 
-            + ", batch size=" + std::to_string(batch_size_);
+            + ", batch size=" + std::to_string(n_samples_per_batch);
     }
 
 
@@ -299,7 +292,7 @@ public:
         assert((new_batch_size>0 && "SGD new batch size must be positive"));
 
         clear_state();
-        batch_size_ = new_batch_size;
+        n_samples_per_batch = new_batch_size;
     }
 
 
@@ -317,13 +310,13 @@ public:
         assert((hyperparameters[1]>=0 && "SGD hyperparameter index 1 (new momentum coefficient) must be positive"));
         assert(((int)hyperparameters[2]>0 && "SGD hyperparameter index 2 (new batch size), as an integer, must be positive"));
 
-        if(batch_size_ != (int)hyperparameters[2]) {
+        if(n_samples_per_batch != (int)hyperparameters[2]) {
             clear_state();
         }
 
         learn_rate = hyperparameters[0];
         momentum_coeff = hyperparameters[1];
-        batch_size_ = (int)hyperparameters[2];
+        n_samples_per_batch = (int)hyperparameters[2];
     }
 
 
@@ -359,13 +352,14 @@ private:
     void clear_state() override {
         total_biases.clear();
         total_weights.clear();
+        velocity_biases.clear();
+        velocity_weights.clear();
         n_samples_trained = 0;
-        momentum_cache.clear();
     }
 
 
     /**
-     * Returns changes in the gradients and biases of `layers`, based on the given inputs.
+     * Returns gradients in the weights and biases of `layers`, based on the given inputs.
      * 
      * @param layers std::vector of layers to optimize
      * @param initial_input value that was first given to the network
@@ -456,11 +450,13 @@ private:
                 delta = layers[l].weight_matrix().transpose().eval() * delta;
 
                 // Apply hidden layer activation derivative
-                const auto& act_prev = layers[l-1].activation_function();
-                const auto& z_prev = act_prev->using_pre_activation()
+                const auto& previous_activation = layers[l-1].activation_function();
+
+                const Eigen::VectorXd& previous_layer_output = previous_activation->using_pre_activation()
                     ? intermediate_outputs[l-1].pre_activation
                     : intermediate_outputs[l-1].post_activation;
-                delta = delta.cwiseProduct(act_prev->compute_derivative(z_prev));
+
+                delta = delta.cwiseProduct(previous_activation->compute_derivative(previous_layer_output));
             }
         }
 
@@ -472,50 +468,49 @@ private:
     void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
         const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) override {
 
-            throw std::runtime_error("NOT YET IMPLEMENTED!");
+        using namespace Eigen;
+
+        Gradients grads = compute_gradients(layers, initial_input, intermediate_outputs, predictions, actuals, loss_calculator);
+
+        //initialize velocities if not set
+        if(velocity_weights.size() != layers.size() || velocity_biases.size() != layers.size()) {
+            //clear states
+            velocity_weights.clear();
+            velocity_biases.clear();
+
+            //reload weight matrices
+            velocity_weights.resize(layers.size());
+            for(size_t w = 0; w < layers.size(); w++) {
+                velocity_weights[w] = MatrixXd::Zero(layers[w].output_dimension(), layers[w].input_dimension());
+            }
+
+            //reload bias vectors
+            velocity_biases.resize(layers.size());
+            for(size_t b = 0; b < layers.size(); b++) {
+                velocity_biases[b] = VectorXd::Zero(layers[b].output_dimension());
+            }
+        }
+
+        //update the layers
+        for(size_t l = 0; l < grads.dW.size(); l++) {
+
+            //get velocity
+            velocity_weights[l] = momentum_coeff * velocity_weights[l] - learn_rate * grads.dW[l];
+            velocity_biases[l] = momentum_coeff * velocity_biases[l] - learn_rate * grads.dB[l];
+
+            //update weight matrix
+            MatrixXd current_weight_matrix = layers[l].weight_matrix();
+            current_weight_matrix += velocity_weights[l];
+            layers[l].set_weight_matrix(current_weight_matrix);
+
+            //update bias vector
+            VectorXd current_bias_vector = layers[l].bias_vector();
+            current_bias_vector += velocity_biases[l];
+            layers[l].set_bias_vector(current_bias_vector);
+        }
     }
 };
 
-        // //update layer weights and biases, if enough training examples are done already
-        // if(n_samples_trained == batch_size_-1) {
-        //     //Counts current layer
-        //     int current_layer = layers.size()-1;
-        //     //Iterates through weights
-        //     auto weight_iterator = total_weights.rbegin();
-        //     //Iterates through biases
-        //     auto bias_iterator = total_biases.rbegin();
-
-        //     while(weight_iterator != total_weights.rend()) {
-        //         //divide average weights and biases by batch size
-        //         Eigen::MatrixXd average_weights = *weight_iterator * (1.0 / batch_size_);
-        //         Eigen::VectorXd average_biases = *bias_iterator * (1.0 / batch_size_);
-
-        //         //get current momentums for weights and biases
-        //         Eigen::MatrixXd& weight_velocity = output.momentums[current_layer].weight_velocity;
-        //         Eigen::VectorXd& bias_velocity   = output.momentums[current_layer].bias_velocity;
-
-        //         //update weight and bias velocities
-        //         weight_velocity = momentum_coeff * weight_velocity - learn_rate * average_weights;
-        //         bias_velocity   = momentum_coeff * bias_velocity - learn_rate * average_biases;
-        //         //THESE ARE NOT THE GRADIENTS!
-                
-        //         //update the layers
-        //         output.dW.push_back(layers[current_layer].weight_matrix() + weight_velocity);
-        //         output.dB.push_back((layers[current_layer].bias_vector() + bias_velocity).eval());
-                
-        //         weight_iterator++;
-        //         bias_iterator++;
-        //         current_layer--;
-        //     }
-        // }
-
-        // //Update number of samples trained
-        // n_samples_trained++;
-        // if(n_samples_trained >= batch_size_) {
-        //     total_biases.clear();
-        //     total_weights.clear();
-        //     n_samples_trained = 0;
-        // }
 
 
 

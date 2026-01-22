@@ -45,6 +45,11 @@ public:
      * Example: CrossEntropy -> `"cross_entropy"`
      */
     virtual std::string name() = 0;
+
+    /**
+     * Properly destroys a loss calculator
+     */
+    virtual ~LossCalculator() = default;
 };
 
 

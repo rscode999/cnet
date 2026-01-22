@@ -601,11 +601,12 @@ void test_file_load() {
 
 int main() {
     //Call testing functions as you wish.
+
     // test_xor_1layer();
     // test_xor_2layer();
     // test_training_xor();
     // test_training_binconvert();
     // test_add_remove();
     // test_hot_swap();
-    test_file_load();
+    // test_file_load();
 }
