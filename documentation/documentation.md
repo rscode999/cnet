@@ -195,7 +195,7 @@ The first matching layer name, i.e. the layer with the lowest index number, is r
 
 **Parameters**
 
-* `layer_name` (`std::string`): Name of layer to find. Must match an existing layer.
+* `layer_name` (`const std::string&`): Name of layer to find. Must match an existing layer.
 
 **Exceptions**
 
@@ -247,7 +247,7 @@ The smart pointer can be used to directly change the network's hyperparameters.
 
 Returns a std::vector containing the optimizer's hyperparameters, in the order required by the current optimizer's `set_optimizer_hyperparameters` method.
 
-Example: If the Network uses a SGD optimizer, the output has 3 indices. Index 0 contains the learning rate, index 1 has the momemtum coefficient, and index 2 has the batch size (as a double).
+Example: If the Network uses a SGD optimizer, the output has 2 indices. Index 0 contains the learning rate and index 1 has the momemtum coefficient.
 
 **Returns:**
 
@@ -561,7 +561,7 @@ The purpose of each index in `hyperparameters` depends on the optimizer.
 
 Throws `illegal_state` if the network has no defined optimizer.
 
-Example: For SGD optimizers, index 0 is the new learning rate, index 1 is for the new momentum coefficient, and index 2 is the new batch size.
+Example: For SGD optimizers, index 0 is the new learning rate and index 1 is for the new momentum coefficient.
 
 For more information about particular optimizers, including their preconditions, see the [optimizer-specific documentation](optimizers.md).
 
@@ -596,13 +596,14 @@ To use this method, the network must be disabled.
 
 ### Methods
 
-#### forward
+#### forward (single input)
 
 *Signature*: `Eigen::VectorXd forward(const Eigen::VectorXd& input, bool training = true)`
 
 Returns the output of the network for a given input.
 
-If `training` is true, intermediate outputs are stored for backpropagation, allowing `{networkName}.reverse` to be called. Otherwise, the network does not store intermediate outputs, saving memory and computation time.
+If `training` is true, intermediate outputs are stored, allowing `{networkName}.reverse` (for single inputs) to be called. The network is prepared for *single-input* backpropagation.   
+Otherwise, the network does not store intermediate outputs, saving memory and computation time.
 
 **Returns**
 
@@ -611,6 +612,30 @@ If `training` is true, intermediate outputs are stored for backpropagation, allo
 **Parameters**
 
 * `input` (`const Eigen::VectorXd&`): Input vector to the network.
+* `training` (`bool`): Whether the network is in training mode. Default: `true`.
+
+**Exceptions**
+
+* `illegal_state`: If the network is disabled.
+
+---
+
+#### forward (multiple inputs)
+
+*Signature*: `std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd>& input, bool training = true)`
+
+Returns the outputs of the network for the given inputs.
+
+If `training` is true, intermediate outputs are stored for backpropagation, allowing `{networkName}.reverse` (for multiple inputs) to be called. The network is prepared for *batch* backpropagation.   
+Otherwise, the network does not store intermediate outputs, saving memory and computation time.
+
+**Returns**
+
+* `std::vector<Eigen::VectorXd>`: Network's predictions for the given input
+
+**Parameters**
+
+* `input` (`const std::vector<Eigen::VectorXd>&`): List of input vectors to the network.
 * `training` (`bool`): Whether the network is in training mode. Default: `true`.
 
 **Exceptions**
@@ -645,11 +670,11 @@ Requires that the network is enabled.
 
 ---
 
-#### reverse
+#### reverse (single output)
 
 *Signature*: `void reverse(const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals)`
 
-Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
+Updates the weights and biases of this network using `predictions` and `actuals` through the network's optimizer.
 
 Recommendation: Call this method immediately after using the `{networkName}.forward` method, using the network's output as `predictions` and the expected output as `actuals`.  
 That way, the stored gradients from `forward` (stored inside the network) will allow `reverse` to update the network gradients properly.
@@ -665,6 +690,32 @@ If these conditions are not met, the method throws `illegal_state`.
 **Exceptions**
 
 * `illegal_state`: If the network is disabled, or a training forward pass was not completed.
+
+---
+
+#### reverse (multiple outputs, in a minibatch)
+
+*Signature*: `void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int n_threads)`
+
+Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer, in a minibatch of size `predictions.size()` and using `n_threads` worker threads.
+
+This is a multithreaded operation. Eigen's thread usage is set to 1 while this method is called.
+
+Recommendation: Call this method immediately after using the `{networkName}.forward` method, using the network's output as `predictions` and the expected output as `actuals`.  
+That way, the stored gradients from `forward` (stored inside the network) will allow `reverse` to update the network gradients properly.
+
+This method requires the network to be enabled. Also, `{networkName}.forward` (for multiple inputs) with `predictions.size()` elements in the input must have been called.  
+If these conditions are not met, the method throws `illegal_state`.
+
+**Parameters**
+
+* `predictions` (`const std::vector<Eigen::VectorXd>&`): Predicted outputs from the network. Each element must have `{networkName}.output_dimension()` elements.
+* `actuals` (`const std::vector<Eigen::VectorXd>&`): Expected outputs that the network should have produced. Must be the same length as `predictions`, and each element must have `{networkName}.output_dimension()` elements
+* `n_threads` (`int`): Number of threads to use. Must be positive.
+
+**Exceptions**
+
+* `illegal_state`: If the network is disabled, or a training forward pass of `predictions.size()` examples was not previously completed.
 
 ---
 

@@ -259,7 +259,7 @@ void test_training_binconvert() {
 
     Network net = Network();
 
-    shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9, 4); //Change to SGD or BatchSGD as needed.
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9); //Change to SGD or BatchSGD as needed.
     net.set_optimizer(optimizer);
     optimizer.reset();
 
@@ -576,7 +576,7 @@ void test_file_load() {
     net.add_layer(2, 3, relu, "my relu layer");
     net.add_layer(3, 3);
     net.set_loss_calculator(make_shared<MeanSquaredError>());
-    net.set_optimizer(make_shared<SGD>(0.01, 0.9, 5));
+    net.set_optimizer(make_shared<SGD>(0.01, 0.9));
     store_network_config("test.txt", net);
     net2 = load_network_config("test.txt");
     cout << net2 << "\n" << endl;

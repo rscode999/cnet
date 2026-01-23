@@ -171,12 +171,11 @@ CNet::Network load_network_config(const std::string& config_filepath) {
                 }
 
                 if(split_line[2] == "sgd") {
-                    assert(hyperparams.size() == 3 && "SGD optimizer in save file must have 3 hyperparameters");
+                    assert(hyperparams.size() == 2 && "SGD optimizer in save file must have 2 hyperparameters");
                     assert(hyperparams[0] > 0 && "save file SGD learning rate must be positive");
                     assert(hyperparams[1] >= 0 && "save file SGD momentum coefficient cannot be negative");
-                    assert((int)hyperparams[2] > 0 && "save file SGD batch size must be positive, when cast to an integer");
 
-                    shared_ptr<SGD> sgd = make_shared<SGD>(hyperparams[0], hyperparams[1], (int)hyperparams[2]);
+                    shared_ptr<SGD> sgd = make_shared<SGD>(hyperparams[0], hyperparams[1]);
                     constructed_network.set_optimizer(sgd);
                     sgd.reset();
                 }

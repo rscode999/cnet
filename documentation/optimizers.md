@@ -46,35 +46,6 @@ The Optimizer is an abstract class. A user cannot directly instantiate an Optimi
 
 All Optimizers share the virtual methods below. They can be called on any Optimizer instance.
 
-<details>
-<summary>Implementation Details</summary>
-
-Optimizers have a private method, `step`, with the following signature:
-```
-virtual void step(
-    std::vector<Layer>& layers, 
-    const Eigen::VectorXd& initial_input,
-    const std::vector<LayerCache>& intermediate_outputs,
-    const Eigen::VectorXd& predictions,
-    const Eigen::VectorXd& actuals,
-    const std::shared_ptr<LossCalculator> loss_calculator
-)
-```
-Parameter descriptions:
-* `layers` std::vector of layers to optimize
-* `initial_input` input value of the network
-* `intermediate_outputs` outputs of each layer before and after the layer's activation function is applied (the `LayerCache` struct, defined in the file "layer.cpp", contains two Eigen::VectorXd's: `pre_activation` and `post_activation`)
-* `predictions` the output of the network for `initial_input`
-* `actuals` what the network should predict for `initial_input`
-* `loss_calculator` smart pointer to loss calculator object
-
-This method mutates its `layers` parameter.
-
-When using its `reverse` method, a Network internally calls its optimizer's `step` method.
-
-</details>
-<br>
-
 ---
 
 #### hyperparameters
@@ -121,7 +92,7 @@ If not overridden, this method returns the string "optimizer".
 
 Sets the optimizer's hyperparameters. The meaning of each index in `hyperparameters` varies depending on the optimizer.
 
-Example of usage for SGD: Index 0 is the new learning rate. Index 1 is the new momentum coefficient. Index 2 is the new batch size.
+Example of usage for SGD: Index 0 is the new learning rate. Index 1 is the new momentum coefficient.
 
 Note that the preconditions on `hyperparameters`'s length, and for each of its indices, vary, depending on the optimizer.
 
@@ -173,7 +144,7 @@ No updates occur on inputs other than every `batch_size`-th input.
 
 #### Default Constructor
 
-*Signature*: `SGD(double learning_rate = 0.01, double momentum_coefficient = 0, int batch_size = 1)`
+*Signature*: `SGD(double learning_rate = 0.01, double momentum_coefficient = 0)`
 
 Constructs a new SGD optimizer using the given hyperparameters.
 
@@ -181,7 +152,6 @@ Constructs a new SGD optimizer using the given hyperparameters.
 
 * `learning_rate` (`double`): Learning rate, which determines the step size and speed of optimization. Must be positive. Default: 0.01
 * `momentum_coefficient` (`double`): Momentum coefficient to accelerate convergence or dampen oscillations. Cannot be negative. Default: 0
-* `batch_size` (`int`): Number of samples to average over during training. Must be positive. Default: 1
 
 ---
 
@@ -190,13 +160,11 @@ Constructs a new SGD optimizer using the given hyperparameters.
 
 #### batch\_size
 
-*Signature*: `int batch_size() const`
+DEPRECATED!
 
-Returns the batch size used by the optimizer.
+Calling this method causes a `std::runtime_error`.
 
-**Returns**
-
-* `int`: The SGD optimizer's current batch size.
+Batch training is implemented as a multithreaded operation.
 
 ---
 
@@ -204,7 +172,7 @@ Returns the batch size used by the optimizer.
 
 *Signature*: `std::vector<double> hyperparameters() const override`
 
-Returns a std::vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), and batch size (index 2).
+Returns a std::vector of 2 hyperparameters: learning rate (index 0) and momentum coefficient (index 1).
 
 **Returns:**
 
@@ -254,7 +222,7 @@ Returns `"sgd"`, the identifying string of the SGD optimizer.
 
 Returns a string containing detailed information about the optimizer's state.
 
-The information includes the optimizer's name (`"sgd"`), learning rate, momentum coefficient, and batch size.
+The information includes the optimizer's name (`"sgd"`), learning rate, and momentum coefficient.
 
 **Returns**
 
@@ -266,17 +234,11 @@ The information includes the optimizer's name (`"sgd"`), learning rate, momentum
 
 #### set\_batch\_size
 
-*Signature*: `void set_batch_size(int new_batch_size)`
+DEPRECATED!
 
-Sets the optimizer's batch size to `new_batch_size`.
+Calling this method causes a `std::runtime_error`.
 
-When this method is called, the optimizer's internal training state is reset.  
-Biases, weights, and momentum data are reset. The number of samples trained in the current batch is set to 0.
-
-**Parameters**
-
-* `new_batch_size` (`int`): new number of training examples to average over during training. Must be positive.
-
+Batch training is implemented as a multithreaded operation.
 
 ---
 
@@ -286,18 +248,17 @@ Biases, weights, and momentum data are reset. The number of samples trained in t
 
 Sets the optimizer's hyperparameters using the values from `hyperparameters`.
 
-For SGD optimizers, `hyperparameters` must be of length 3.   
+For SGD optimizers, `hyperparameters` must be of length 2.   
 Index 0 contains the new *learning rate* to set. It must be positive.  
 Index 1 contains the new *momentum coefficient*. It must be non-negative.  
-Index 2 contains the new *batch size*. It must be positive, when rounded down to the nearest integer.
 
 If the batch size is changed, the optimizer's internal training data (i.e. momentum, intermediate layer outputs, number of samples trained so far) is reset.
 
-Required contents of `hyperparameters`: {new learning rate, new momentum coefficient, new batch size}
+Required contents of `hyperparameters`: {new learning rate, new momentum coefficient}
 
 **Parameters**
 
-* `hyperparameters` (`const std::vector<double>&`): Vector of new hyperparameters. Must be of length 3, where index 0 is positive, index 1 is non-negative, and index 2 (rounded down) is positive
+* `hyperparameters` (`const std::vector<double>&`): Vector of new hyperparameters. Must be of length 2, where index 0 is positive and index 1 is on the interval [0, 1]
 ---
 
 #### set\_learning\_rate
@@ -321,7 +282,7 @@ Sets the optimizer's momentum coefficient to `new_momentum_coefficient`.
 
 **Parameters**
 
-* `new_momentum_coefficient` (`double`): New momentum coefficient to use. Cannot be negative.
+* `new_momentum_coefficient` (`double`): New momentum coefficient to use. Must be on the interval [0, 1].
 
 
 ---

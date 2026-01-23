@@ -2,6 +2,7 @@
 #include "loss_calculator.cpp"
 
 #include <list>
+#include <thread>
 #include <vector>
 
 #include <iostream>
@@ -9,7 +10,10 @@
 
 namespace CNet {
 
-
+/**
+ * Gives the minimum of the two arguments
+ */
+#define min(a, b) ( (a) < (b) ? (a) : (b) )
 
 
 /**
@@ -87,6 +91,28 @@ private:
     virtual void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
         const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) = 0;
     
+    /**
+     * Updates `layers` in-place using the optimizer, using calculated gradients.
+     * 
+     * Initial inputs, intermediate layer outputs, predictions, and actuals are treated as a single minibatch.
+     * Losses and momentums are averaged over all inputs.
+     * 
+     * Each training example is trained by a worker thread. During training, the number of threads reserved for Eigen becomes 1.
+     * The Eigen thread count is reset once this method finishes.
+     * 
+     * This is a private method. Not intended to be called by a user.
+     * 
+     * Mutates `layers` and this Optimizer object.
+     * 
+     * @param layers std::vector of layers to optimize
+     * @param initial_inputs input values of the network, as a std::vector
+     * @param intermediate_outputs outputs of each layer, for each training example, before and after the layer's activation function is applied
+     * @param predictions the output of the network for each corresponding value in `initial_inputs`
+     * @param actuals what the network should predict for each corresponding value in `initial_inputs`
+     * @param loss_calculator smart pointer to loss calculator object
+     */ 
+    virtual void step_minibatch(std::vector<Layer>& layers, const std::vector<Eigen::VectorXd>& initial_input, const std::vector<std::vector<LayerCache>>& intermediate_outputs,
+        const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, const std::shared_ptr<LossCalculator> loss_calculator, int n_threads) = 0;
 
 public:
     /**
@@ -145,20 +171,6 @@ private:
     double momentum_coeff;
 
     /**
-     * Number of samples to train per batch. Must be positive.
-     */
-    int n_samples_per_batch;
-
-    /**
-     * Number of samples trained so far. 
-     * 
-     * When this quantity reaches `batch_size`-1, the given layers are updated.
-     * 
-     * Must be between 0 and `batch_size`-1.
-     */
-    int n_samples_trained;
-
-    /**
      * Holds per-layer biases accumulated over training.
      * 
      * Each index holds the total bias for the given layer.
@@ -211,17 +223,14 @@ public:
      * 
      * @param learning_rate learning rate, for determining speed of convergence. Must be positive. Default 0.01
      * @param momentum_coefficient for determining amount of momentum to use. Cannot be negative. Default 0
-     * @param batch_size number of datapoints to use in one batch. Must be positive. Default 1
      */
-    SGD(double learning_rate = 0.01, double momentum_coefficient = 0, int batch_size = 1) {
+    SGD(double learning_rate = 0.01, double momentum_coefficient = 0) {
         assert((learning_rate>0 && "Learning rate must be positive"));
         assert((momentum_coefficient>=0 && "Momentum coefficient cannot be negative"));
-        assert((batch_size>0 && "Batch size must be positive"));
         
         learn_rate = learning_rate;
         momentum_coeff = momentum_coefficient;
-        n_samples_per_batch = batch_size;
-        n_samples_trained = 0;
+
     }
 
 
@@ -230,17 +239,17 @@ public:
     //GETTERS
 
     /**
-     * @return optimizer's batch size
+     * (DEPRECATED METHOD) Throws a `std::runtime_error`.
      */
     int batch_size() const {
-        return n_samples_per_batch;
+        throw std::runtime_error("DEPRECATED");
     }
 
     /**
-     * @return vector of 3 hyperparameters: learning rate (index 0), momentum coefficient (index 1), batch size (index 2)
+     * @return vector of 2 hyperparameters: learning rate (index 0), momentum coefficient (index 1)
      */
     std::vector<double> hyperparameters() const override {
-        return {learn_rate, momentum_coeff, (double)n_samples_per_batch};
+        return {learn_rate, momentum_coeff};
     }
 
 
@@ -269,11 +278,10 @@ public:
 
 
     /**
-     * @return string containing the optimizer's name, learning rate, momentum coefficient, and batch size
+     * @return string containing the optimizer's name, learning rate, and momentum coefficient
      */
     std::string to_string() const override {
-        return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff) 
-            + ", batch size=" + std::to_string(n_samples_per_batch);
+        return "sgd, learning rate=" + std::to_string(learn_rate) + ", momentum coefficient=" + std::to_string(momentum_coeff);
     }
 
 
@@ -282,41 +290,28 @@ public:
 
 
     /**
-     * Sets the SGD's batch size to `new_batch_size`.
-     * 
-     * The optimizer's current training data will be reset.
-     * 
-     * @param new_batch_size new batch size. Must be positive.
+     * (DEPRECATED METHOD) Throws a `std::runtime_error`.
      */
     void set_batch_size(int new_batch_size) {
-        assert((new_batch_size>0 && "SGD new batch size must be positive"));
-
-        clear_state();
-        n_samples_per_batch = new_batch_size;
+        throw std::runtime_error("DEPRECATED");
     }
 
 
     /**
      * Sets the SGD optimizer's hyperparameters to `hyperparameters`.
-     * Index 0 contains the new learning rate. Index 1 contains the new momentum coefficient. Index 2 contains the new batch size.
+     * Index 0 contains the new learning rate. Index 1 contains the new momentum coefficient.
      * 
      * If the batch size is changed, the optimizer's training data will be reset.
      * 
-     * @param hyperparameters vector of new hyperparameters. Must be of length 3, where index 0 is positive, index 1 is non-negative, and index 2 (rounded down to the nearest integer) is positive
+     * @param hyperparameters vector of new hyperparameters. Must be of length 2, where index 0 is positive and index 1 is on the interval [0, 1]
      */
     void set_hyperparameters(const std::vector<double>& hyperparameters) override {
-        assert((hyperparameters.size() == 3 && "SGD optimizer hyperparameter list must be of length 3"));
-        assert((hyperparameters[0]>0 && "SGD hyperparameter index 0 (new learning rate) must be positive"));
-        assert((hyperparameters[1]>=0 && "SGD hyperparameter index 1 (new momentum coefficient) must be positive"));
-        assert(((int)hyperparameters[2]>0 && "SGD hyperparameter index 2 (new batch size), as an integer, must be positive"));
-
-        if(n_samples_per_batch != (int)hyperparameters[2]) {
-            clear_state();
-        }
+        assert((hyperparameters.size() == 2 && "SGD optimizer hyperparameter list must be of length 2"));
+        assert((hyperparameters[0] > 0 && "SGD hyperparameter index 0 (new learning rate) must be positive"));
+        assert((0 <= hyperparameters[1] && hyperparameters[1] <= 1 && "SGD hyperparameter index 0 (new learning rate) must be on the interval [0, 1]"));
 
         learn_rate = hyperparameters[0];
         momentum_coeff = hyperparameters[1];
-        n_samples_per_batch = (int)hyperparameters[2];
     }
 
 
@@ -332,10 +327,10 @@ public:
 
     /**
      * Sets the optimizer's momentum coefficient to `new_momentum_coefficient`.
-     * @param new_learning_rate new momentum coefficient. Cannot be negative.
+     * @param new_learning_rate new momentum coefficient. Must be on the interval [0, 1]
      */
     void set_momentum_coefficient(double new_momentum_coefficient) {
-        assert(new_momentum_coefficient >= 0 && "SGD new momentum coefficient must be non-negative");
+        assert(0 <= new_momentum_coefficient && new_momentum_coefficient <= 1 && "SGD new momentum coefficient must be on the interval [0, 1]");
         momentum_coeff = new_momentum_coefficient;
     }
 
@@ -354,7 +349,6 @@ private:
         total_weights.clear();
         velocity_biases.clear();
         velocity_weights.clear();
-        n_samples_trained = 0;
     }
 
 
@@ -388,14 +382,6 @@ private:
         Gradients output;
         output.dB.resize(layers.size());
         output.dW.resize(layers.size());
-
-        // //Initialize momentums to all 0's (if not already initialized)
-        // if(momentum_cache.size() == 0) {
-        //     for(const Layer& layer : layers) {
-        //         output.momentums.emplace_back(layer.output_dimension(), layer.input_dimension(), layer.output_dimension());
-        //     }
-        // }
-
 
         Eigen::VectorXd delta;
         auto final_activation = layers.back().activation_function();
@@ -464,7 +450,18 @@ private:
     }
 
 
-
+    /**
+     * Updates `layers` in-place using SGD.
+     * 
+     * Mutates `layers` and this SGD object.
+     * 
+     * @param layers std::vector of layers to optimize
+     * @param initial_input input value of the network
+     * @param intermediate_outputs outputs of each layer before and after the layer's activation function is applied
+     * @param predictions the output of the network for `initial_input`
+     * @param actuals what the network should predict for `initial_input`
+     * @param loss_calculator smart pointer to loss calculator object
+     */
     void step(std::vector<Layer>& layers, const Eigen::VectorXd& initial_input, const std::vector<LayerCache>& intermediate_outputs,
         const Eigen::VectorXd& predictions, const Eigen::VectorXd& actuals, const std::shared_ptr<LossCalculator> loss_calculator) override {
 
@@ -508,6 +505,113 @@ private:
             current_bias_vector += velocity_biases[l];
             layers[l].set_bias_vector(current_bias_vector);
         }
+        
+    }
+
+
+    /**
+     * Updates `layers` using SGD over a minibatch.
+     * 
+     * Mutates `layers` and this SGD object.
+     * 
+     * @param layers std::vector of layers to optimize
+     * @param initial_inputs input values of the network, as a std::vector
+     * @param intermediate_outputs outputs of each layer, for each training example, before and after the layer's activation function is applied
+     * @param predictions the output of the network for each corresponding value in `initial_inputs`
+     * @param actuals what the network should predict for each corresponding value in `initial_inputs`
+     * @param loss_calculator smart pointer to loss calculator object
+     */
+    void step_minibatch(std::vector<Layer>& layers, const std::vector<Eigen::VectorXd>& initial_inputs, const std::vector<std::vector<LayerCache>>& intermediate_outputs,
+        const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, const std::shared_ptr<LossCalculator> loss_calculator, int n_threads) override {
+
+        using namespace std;
+        using namespace Eigen;
+
+        const int OLD_N_THREADS = Eigen::nbThreads();
+        Eigen::setNbThreads(1);
+
+        vector<Gradients> gradients(predictions.size()); //Gradients across the minibatch. Size = batch size
+
+        //Train the minibatch until all samples have been trained
+        vector<thread> threads(n_threads);
+
+        std::atomic<int> next_idx{0};
+
+        for (int t = 0; t < n_threads; ++t) {
+            threads[t] = std::thread([&] {
+                int idx;
+                while ((idx = next_idx.fetch_add(1)) < predictions.size()) {
+                    gradients[idx] = compute_gradients(
+                        cref(layers),
+                        cref(initial_inputs[idx]),
+                        cref(intermediate_outputs[idx]),
+                        cref(predictions[idx]),
+                        cref(actuals[idx]),
+                        loss_calculator
+                    );
+                }
+            });
+        }
+
+        for (auto& th : threads) th.join();
+
+        //Initialize average gradients to 0
+        Gradients average_gradients;
+        average_gradients.dW.resize(layers.size());
+        average_gradients.dB.resize(layers.size());
+        for(size_t i = 0; i < layers.size(); i++) {
+            average_gradients.dW[i] = MatrixXd::Zero(layers[i].output_dimension(), layers[i].input_dimension());
+            average_gradients.dB[i] = VectorXd::Zero(layers[i].output_dimension());
+        }
+        
+        //Average the calculated gradients
+        for(const Gradients& g : gradients) {
+            //Idiot check
+            assert(g.dW.size() == layers.size());
+            assert(g.dB.size() == layers.size());
+
+            for(size_t i = 0; i < g.dW.size(); i++) {
+                average_gradients.dW[i] += g.dW[i];
+                average_gradients.dB[i] += g.dB[i];
+            }   
+        }
+        for(size_t i = 0; i < average_gradients.dW.size(); i++) {
+            average_gradients.dW[i] /= gradients.size();
+            average_gradients.dB[i] /= gradients.size();
+        }
+
+        //initialize velocities if not set
+        if(velocity_weights.size() != layers.size() || velocity_biases.size() != layers.size()) {
+            //clear states
+            velocity_weights.clear();
+            velocity_biases.clear();
+
+            //reload weight matrices
+            velocity_weights.resize(layers.size());
+            for(size_t w = 0; w < layers.size(); w++) {
+                velocity_weights[w] = MatrixXd::Zero(layers[w].output_dimension(), layers[w].input_dimension());
+            }
+
+            //reload bias vectors
+            velocity_biases.resize(layers.size());
+            for(size_t b = 0; b < layers.size(); b++) {
+                velocity_biases[b] = VectorXd::Zero(layers[b].output_dimension());
+            }
+        }
+
+        //Update layers
+        for(size_t l = 0; l < average_gradients.dW.size(); l++) {
+
+            //get velocity
+            velocity_weights[l] = momentum_coeff * velocity_weights[l] - learn_rate * average_gradients.dW[l];
+            velocity_biases[l] = momentum_coeff * velocity_biases[l] - learn_rate * average_gradients.dB[l];
+
+            //update layers
+            layers[l].set_weight_matrix(layers[l].weight_matrix() + velocity_weights[l]);
+            layers[l].set_bias_vector(layers[l].bias_vector() + velocity_biases[l]);
+        }
+
+        Eigen::setNbThreads(OLD_N_THREADS);
     }
 };
 
@@ -526,9 +630,8 @@ std::shared_ptr<Optimizer> make_optimizer(const std::string& name, const std::ve
     using namespace std;
 
     if(name == "sgd") {
-        assert(hyperparameters.size() == 3 && "SGD creation requires 3 hyperparameters");
-        assert((int)hyperparameters[2] > 0 && "Batch size of hyperparameters for SGD must be positive");
-        shared_ptr<SGD> out = make_shared<SGD>(hyperparameters[0], hyperparameters[1], (int)hyperparameters[2]);
+        assert(hyperparameters.size() == 2 && "SGD creation requires 3 hyperparameters");
+        shared_ptr<SGD> out = make_shared<SGD>(hyperparameters[0], hyperparameters[1]);
         return out;
     }
     throw runtime_error("optimizer name not recognized");

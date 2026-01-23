@@ -114,16 +114,15 @@ Note: Both `set_loss_calculator` and `set_optimizer` use smart pointers, to enab
 
 To adjust the optimizer's hyperparameters, use the optimizer's methods (provided you didn't reset the optimizer's smart pointer):
 ```
-//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 1
+//Set learning rate to 0.005, momentum coefficient to 0.9
 sgd_optimizer->set_learning_rate(0.005);
 sgd_optimizer->set_momentum_coefficient(0.9);
-sgd_optimizer->set_batch_size(1);
 //Methods are unique to the SGD optimizer.
 ```
 Or, make the changes through the Network:
 ```
-//Set learning rate to 0.005, momentum coefficient to 0.9, batch size to 1
-net.set_optimizer_hyperparameters(std::vector<double>{0.005, 0.9, 1});
+//Set learning rate to 0.005, momentum coefficient to 0.9
+net.set_optimizer_hyperparameters(std::vector<double>{0.005, 0.9});
 //Vector's length and parameters are unique to the SGD optimizer.
 ```
 

@@ -64,14 +64,14 @@ private:
      * 
      * Used in backpropagation.
      */
-    Eigen::VectorXd initial_input;
+    std::vector<Eigen::VectorXd> initial_inputs;
 
     /**
      * Stores outputs from before and after the activation function is applied at each layer.
      * 
      * Used in backpropagation.
      */
-    std::vector<LayerCache> intermediate_outputs;
+    std::vector<std::vector<LayerCache>> intermediate_outputs;
 
 
     /**
@@ -354,7 +354,7 @@ public:
         }
 
         //Check inputs and outputs of each layer. Also check layers for Softmax activation
-        for(int i=0; i<(int)layers.size()-1; i++) {
+        for(int i = 0; i < (int)layers.size() - 1; i++) {
             //Dimension compatibility
             if(layers[i].output_dimension() != layers[i+1].input_dimension()) {
                 throw illegal_state("Enable check failed- Output dimension of layer " + std::to_string(i) + " (dimension=" + std::to_string(layers[i].output_dimension()) +
@@ -368,8 +368,8 @@ public:
         }
 
         //Check passed: prepare for training
-        initial_input = Eigen::VectorXd(layers[0].input_dimension());
         intermediate_outputs.clear();
+        initial_inputs.clear();
         optim->clear_state();
 
         layers.shrink_to_fit();
@@ -394,7 +394,7 @@ public:
      * @throws `illegal_state` if this method is called while enabled
      */
     void insert_layer_at(int new_pos, Layer new_layer) {
-        assert((new_pos>=0 && new_pos<=layer_count() && "New layer insertion position must be between 0 and (number of layers)"));
+        assert((new_pos >= 0 && new_pos <= layer_count() && "New layer insertion position must be between 0 and (number of layers)"));
         if(enabled) {
             throw illegal_state("Cannot insert a new layer while enabled");
         }
@@ -613,6 +613,7 @@ public:
      * 
      * If `training` is true, the network internally records layer outputs for backpropagation.
      * After using the method with `training`=true, the `reverse` method can be called.
+     * All data from previous calls to `forward` are erased.
      * 
      * Requires that the network is enabled. If not, the method throws `illegal_state`.
      * 
@@ -631,23 +632,87 @@ public:
         }
 
         if(training) {
-            intermediate_outputs.clear();
-            intermediate_outputs.reserve((int)layers.size());
-            initial_input = input;
+            //set initial and intermediate outputs for 1 example
+
+            initial_inputs.resize(1);
+            initial_inputs[0] = input;
+
+            intermediate_outputs.resize(1);
+            intermediate_outputs[0] = {};
         }
 
         //Pass input through all layers' forward operations
         Eigen::VectorXd current_layer_output = input;
-        for(int i=0; i<(int)layers.size(); i++) {
+        for(int i = 0; i < (int)layers.size(); i++) {
             Eigen::VectorXd pre_activation = layers[i].forward(current_layer_output);
             current_layer_output = layers[i].activation_function()->compute(pre_activation);
 
             if(training) {
-                intermediate_outputs.push_back({pre_activation, current_layer_output});
+                intermediate_outputs[0].push_back({pre_activation, current_layer_output});
             }
         }
 
         return current_layer_output;
+    }
+
+
+    /**
+     * Returns the result of the feed-forward operation on all the given inputs, i.e. the network's predictions for each element in `inputs`.
+     * 
+     * If `training` is true, the network internally records layer outputs for backpropagation.
+     * After using the method with `training`=true, the `reverse` method can be called.
+     * All data from previous calls to `forward` are erased.
+     * 
+     * Requires that the network is enabled. If not, the method throws `illegal_state`.
+     * 
+     * @param input input to the network. Each element must have `{networkName}.input_dimension()` rows
+     * @param training true if training the network, false if getting results for evaluation only. Default: `true`
+     * @return the network's output, as a std::vector<Eigen::VectorXd>, whose elements are of dimension `{networkName}.output_dimension()`
+     * @throws `illegal_state` if the network is not enabled
+     */
+    std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd> inputs, bool training = true) {
+        using namespace std;
+        using namespace Eigen;
+
+        //Enable check
+        if(!enabled) {
+            throw illegal_state("Network forward and predict operation requires the network to be enabled");
+        }
+
+        vector<VectorXd> outputs;
+        outputs.resize(inputs.size());
+
+        if(training) {
+            //set initial inputs for the examples
+
+            initial_inputs.resize(inputs.size());
+            for(int i = 0; i < inputs.size(); i++) {
+                assert(initial_inputs[i].size() == input_dimension() && "All initial inputs in the multiple-input forward pass must have `input_dimension()` elements");
+                initial_inputs[i] = inputs[i];
+            }
+            
+            intermediate_outputs.resize(inputs.size());
+        }
+
+        //Do the forward operation on each input
+        for (size_t e = 0; e < inputs.size(); e++) {
+
+            //pass each input through the network's forward operation
+            VectorXd current_layer_output = initial_inputs[e];
+            for (int i = 0; i < (int)layers.size(); i++) {
+                VectorXd pre_activation = layers[i].forward(current_layer_output);
+                current_layer_output = layers[i].activation_function()->compute(pre_activation);
+
+                if(training) {
+                    intermediate_outputs[e].push_back({pre_activation, current_layer_output});
+                }
+            }
+            
+            //add the network output to the returned outputs
+            outputs[e] = current_layer_output;
+        }
+        
+        return outputs;
     }
 
 
@@ -689,6 +754,8 @@ public:
         assert((actuals.cols() == 1 && "Reverse process actuals must be a column vector"));
         assert((predictions.rows() == output_dimension() && "Reverse process predictions length must equal network's output dimension"));
         assert((actuals.rows() == output_dimension() && "Reverse process actuals length must equal network's output dimension"));
+        assert(initial_inputs.size() == 1 && "Reverse process requires using `forward` on one input vector");
+        assert(intermediate_outputs.size() == 1 && "Reverse process requires using `forward` on one input vector");
 
         //Enable check
         if(!enabled) {
@@ -701,8 +768,46 @@ public:
         }
         
         //Use the network's optimizer
-        optim->step(layers, initial_input, intermediate_outputs,
-            predictions, actuals, loss_calc);
+        optim->step(layers, initial_inputs[0], intermediate_outputs[0], predictions, actuals, loss_calc);
+    }
+
+    /**
+     * Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
+     * 
+     * This method requires the network to be enabled. Also, `{networkName}.forward` (for a std::vector of inputs) 
+     * with `training`=true must have been called since the network was enabled.
+     * If these conditions are not met, the method throws `illegal_state`.
+     * 
+     * @param predictions what the network predicts for a given input. All elements must be of dimension `{networkName}.output_dimension`
+     * @param actuals expected output for the network's prediction. Must be of the same length as `predictions`, and all elements must be of dimension `{networkName}.output_dimension`
+     * @param n_threads number of threads to use. Must be positive.
+     * @throws `illegal_state` if the network is not enabled, or a feed-forward training operation on many inputs was not done
+     */
+    void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int n_threads) {
+        using namespace Eigen;
+
+        assert(predictions.size() == actuals.size() && "Sizes of the predictions and actuals vectors must be equal");
+        #ifndef NDEBUG //This is wacked.
+            for(const VectorXd& p : predictions) {
+                assert(p.size() == output_dimension() && "Multi-input reverse operation requires all predictions' dimensions to equal `output_dimension()`");
+            }
+            for(const VectorXd& a : actuals) {
+                assert(a.size() == output_dimension() && "Multi-input reverse operation requires all actuals' dimensions to equal `output_dimension()`");
+            }
+        #endif 
+        assert(n_threads > 0 && "Number of threads in multi-input reverse operation must be positive");
+        
+        //Enable check
+        if(!enabled) {
+            throw illegal_state("Reverse operation requires the network to be enabled");
+        }
+        
+        //Ensure that there are intermediate outputs
+        if(intermediate_outputs.size() <= 0) {
+            throw illegal_state("Reverse operation requires that the `forward` method (with training = true) was previously used");
+        }
+
+        optim->step_minibatch(layers, initial_inputs, intermediate_outputs, predictions, actuals, loss_calc, n_threads);
     }
 
 
@@ -725,7 +830,7 @@ public:
      */
     void operator+=(Layer new_layer) {
         if(enabled) {
-            throw illegal_state("(+ operator) Cannot add layer while the network is enabled");
+            throw illegal_state("(+= operator) Cannot add layer while the network is enabled");
         }
         add_layer(new_layer);
     }
@@ -733,15 +838,15 @@ public:
 
 
     /**
-     * Exports `network` to the output stream `os`, returning a reference to `os` with `network` added.
+     * Exports `network` to the output stream `output_stream`, returning a reference to `output_stream` with `network` added.
      * 
      * The output stream will contain all layers converted to strings, separated by newlines.
      * 
-     * @param os output stream to export to
+     * @param output_stream output stream to export to
      * @param network network to export
      * @return new output stream containing the network's information inside
      */
-    friend std::ostream& operator<<(std::ostream& os, const Network& network);
+    friend std::ostream& operator<<(std::ostream& output_stream, const Network& network);
 
     ////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////
