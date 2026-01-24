@@ -12,7 +12,7 @@ namespace CNet {
 
     
 /**
- * Utility struct for storing pre-activation and post-activation results
+ * Utility struct for storing pre-activation results, post-activation results, and weight matrices
  * at each step of the forward process.
  * 
  * Used in backpropagation.
@@ -27,6 +27,11 @@ struct LayerCache {
      * Outputs of a network's layer, after the layer's activation function is applied
      */
     Eigen::VectorXd post_activation;
+
+    /**
+     * Weight matrix of the layer. Allows for mutable copies of the matrix during optimization.
+     */
+    Eigen::MatrixXd weights;
 };
 
 
@@ -75,14 +80,18 @@ public:
      * @param input_dimension number of inputs that the Layer takes in. Must be positive.
      * @param output_dimension number of outputs that the Layer gives. Must be positive.
      * @param name identifier for this Layer. Default: `"layer"`
+     * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      */
-    Layer(int input_dimension, int output_dimension, std::string name = "layer") {
+    Layer(int input_dimension, int output_dimension, std::string name = "layer", int initialization_scale_factor = 1) {
         assert((input_dimension>0 && "Input vector's dimension must be positive"));
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
         weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
         biases  = Eigen::MatrixXd::Random(output_dimension, 1);
+        //Scale them
+        weights *= initialization_scale_factor;
+        biases *= initialization_scale_factor;
         
         //set functions to default
         activation_fcn = std::make_shared<IdentityActivation>();
@@ -95,16 +104,19 @@ public:
     /**
      * Creates a new Layer and loads it with the provided fields.
      * 
-     * The weights and biases are initialized to random numbers on the interval [-1, 1].
+     * The weights and biases are initialized to random numbers 
+     * on the interval [-`initialization_scale_factor`, `initialization_scale_factor`].
      * 
      * @param input_dimension number of inputs that the Layer takes in. Must be positive.
      * @param output_dimension number of outputs that the Layer gives. Must be positive.
      * @param activation_function smart pointer to activation function object to use
      * @param name identifier for this Layer. Default: `"layer"`
+     * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      */
     Layer(int input_dimension, int output_dimension,
         std::shared_ptr<ActivationFunction> activation_function,
-        std::string name = "layer") {
+        std::string name = "layer",
+        int initialization_scale_factor = 1) {
 
         assert((input_dimension>0 && "Input vector's dimension must be positive"));
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
@@ -112,6 +124,9 @@ public:
         //Initialize weights and biases to random values on [-1, 1]
         weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
         biases  = Eigen::VectorXd::Random(output_dimension);
+        //Scale them
+        weights *= initialization_scale_factor;
+        biases *= initialization_scale_factor;
         
         //initialize activation function
         activation_fcn = activation_function;

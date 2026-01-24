@@ -376,9 +376,6 @@ private:
         assert((actuals.cols() == 1 && "Actual values must be a column vector"));
         assert((actuals.rows() == layers.back().output_dimension() && "Actual value vector must have dimension equal to the network's output dimension"));
 
-        //Idiot check
-        assert(intermediate_outputs.size() == layers.size());
-
         Gradients output;
         output.dB.resize(layers.size());
         output.dW.resize(layers.size());
@@ -387,7 +384,7 @@ private:
         auto final_activation = layers.back().activation_function();
         bool final_activation_using_softmax = final_activation->name() == "softmax";
         bool using_cross_entropy_loss = loss_calculator->name() == "cross_entropy";
-
+        
         // Step 1: Compute dL/dy
         Eigen::VectorXd loss_grad = loss_calculator->compute_loss_gradient(predictions, actuals);
  
@@ -416,6 +413,7 @@ private:
         }
 
 
+
         //Compute for the other layers
         for(int l = static_cast<int>(layers.size()) - 1; l >= 0; l--) {
 
@@ -433,7 +431,7 @@ private:
             //propagate delta
             if (l > 0) {
                 // Backpropagate delta to previous layer
-                delta = layers[l].weight_matrix().transpose().eval() * delta;
+                delta = intermediate_outputs[l].weights.transpose().eval() * delta;
 
                 // Apply hidden layer activation derivative
                 const auto& previous_activation = layers[l-1].activation_function();
@@ -552,8 +550,9 @@ private:
                 }
             });
         }
-
-        for (auto& th : threads) th.join();
+        for (auto& th : threads) {
+            th.join();
+        }
 
         //Initialize average gradients to 0
         Gradients average_gradients;

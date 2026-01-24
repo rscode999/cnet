@@ -247,7 +247,7 @@ The smart pointer can be used to directly change the network's hyperparameters.
 
 Returns a std::vector containing the optimizer's hyperparameters, in the order required by the current optimizer's `set_optimizer_hyperparameters` method.
 
-Example: If the Network uses a SGD optimizer, the output has 2 indices. Index 0 contains the learning rate and index 1 has the momemtum coefficient.
+Example: If the Network uses a SGD optimizer, the output has 2 indices. Index 0 contains the learning rate and index 1 has the momentum coefficient.
 
 **Returns:**
 
@@ -298,7 +298,7 @@ Setters that add or remove layers that are not the final layer run in linear tim
 
 </details>
 
-#### add\_layer (Layer)
+#### add\_layer (Layer object)
 
 *Signature*: `void add_layer(Layer new_layer)`
 
@@ -308,7 +308,7 @@ To use this method, the network must be disabled.
 
 **Parameters**
 
-* `new_layer` (`Layer`): Layer to add.
+* `new_layer` (`Layer`): Layer object to add.
 
 **Exceptions**
 
@@ -316,11 +316,14 @@ To use this method, the network must be disabled.
 
 ---
 
-#### add\_layer (dimensions + name)
+#### add\_layer (dimensions)
 
-*Signature*: `void add_layer(int input_dimension, int output_dimension, std::string name = "layer")`
+*Signature*: `void add_layer(int input_dimension, int output_dimension, std::string name = "layer", int initialization_scale_factor = 1)`
 
 Adds a new layer with the given dimensions and name. The new layer has no activation function.
+
+The weights and biases of the new layer are initialized to uniformly distributed random numbers 
+on the interval [-`initialization_scale_factor`, `initialization_scale_factor`].
 
 To use this method, the network must be disabled.
 
@@ -339,6 +342,7 @@ The new layer's activation function is the identity function, f(x)=x, a placehol
 * `input_dimension` (`int`): Number of input nodes. Must be positive.
 * `output_dimension` (`int`): Number of output nodes. Must be positive.
 * `name` (`std::string`): Layer name. Default: `"layer"`
+* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
 
 **Exceptions**
 
@@ -346,11 +350,14 @@ The new layer's activation function is the identity function, f(x)=x, a placehol
 
 ---
 
-#### add\_layer (dimensions + activation + name)
+#### add\_layer (dimensions + activation)
 
-*Signature*: `void add_layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer")`
+*Signature*: `void add_layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer", int initialization_scale_factor = 1)`
 
-Adds a new layer with specified activation function and name.
+Adds a new layer with the specified dimensions, activation function, and name.
+
+The weights and biases of the new layer are initialized to uniformly distributed random numbers 
+on the interval [-`initialization_scale_factor`, `initialization_scale_factor`].
 
 To use this method, the network must be disabled.
 
@@ -360,6 +367,7 @@ To use this method, the network must be disabled.
 * `output_dimension` (`int`): Number of output nodes. Must be positive.
 * `activation_function` (`std::shared_ptr<ActivationFunction>`): Pointer to activation function.
 * `name` (`std::string`): Layer name. Default: `"layer"`
+* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
 
 **Exceptions**
 
@@ -622,11 +630,15 @@ Otherwise, the network does not store intermediate outputs, saving memory and co
 
 #### forward (multiple inputs)
 
-*Signature*: `std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd>& input, bool training = true)`
+*Signature*: `std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd>& inputs, int n_threads = 1, bool training = true)`
 
-Returns the outputs of the network for the given inputs.
+Returns the outputs of the network for each input vector given in `inputs`.
 
-If `training` is true, intermediate outputs are stored for backpropagation, allowing `{networkName}.reverse` (for multiple inputs) to be called. The network is prepared for *batch* backpropagation.   
+The method uses `n_threads` worker threads to increase computational efficiency.  
+While the method runs, the number of threads that Eigen uses is set to 1. The Eigen thread usage is reset when the method finishes.
+
+If `training` is true, intermediate outputs are stored for backpropagation, allowing `{networkName}.reverse` (for multiple inputs) to be called. The network is prepared for *batch* backpropagation.  
+All data from previous calls to `forward` is erased.     
 Otherwise, the network does not store intermediate outputs, saving memory and computation time.
 
 **Returns**
@@ -636,6 +648,7 @@ Otherwise, the network does not store intermediate outputs, saving memory and co
 **Parameters**
 
 * `input` (`const std::vector<Eigen::VectorXd>&`): List of input vectors to the network.
+* `n_threads` (`int`): Number of threads to use. Must be positive. Default 1.
 * `training` (`bool`): Whether the network is in training mode. Default: `true`.
 
 **Exceptions**
@@ -695,11 +708,12 @@ If these conditions are not met, the method throws `illegal_state`.
 
 #### reverse (multiple outputs, in a minibatch)
 
-*Signature*: `void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int n_threads)`
+*Signature*: `void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int n_threads = 1)`
 
-Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer, in a minibatch of size `predictions.size()` and using `n_threads` worker threads.
+Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer, in a minibatch of size `predictions.size()`.
 
-This is a multithreaded operation. Eigen's thread usage is set to 1 while this method is called.
+The method uses `n_threads` worker threads to increase computational efficiency.  
+While the method runs, the number of threads that Eigen uses is set to 1. The Eigen thread usage is reset when the method finishes.
 
 Recommendation: Call this method immediately after using the `{networkName}.forward` method, using the network's output as `predictions` and the expected output as `actuals`.  
 That way, the stored gradients from `forward` (stored inside the network) will allow `reverse` to update the network gradients properly.
@@ -711,7 +725,7 @@ If these conditions are not met, the method throws `illegal_state`.
 
 * `predictions` (`const std::vector<Eigen::VectorXd>&`): Predicted outputs from the network. Each element must have `{networkName}.output_dimension()` elements.
 * `actuals` (`const std::vector<Eigen::VectorXd>&`): Expected outputs that the network should have produced. Must be the same length as `predictions`, and each element must have `{networkName}.output_dimension()` elements
-* `n_threads` (`int`): Number of threads to use. Must be positive.
+* `n_threads` (`int`): Number of threads to use. Must be positive. Default 1.
 
 **Exceptions**
 
@@ -914,25 +928,36 @@ Internally, all layers have activation functions. If an activation is not assign
 
 #### Without activation function
 
-*Signature:* `Layer(int input_dimension, int output_dimension, std::string name = "layer")`
+*Signature:* `Layer(int input_dimension, int output_dimension, std::string name = "layer", int initialization_scale_factor = 1)`
 
-Creates a new Layer and initializes all fields. The activation function is set to the identity activation function, f(x)=x, which does nothing.
+Creates a new Layer, without an activation function, and initializes all fields.
 
-All weights and biases are randomly initialized on the uniform interval [-1, 1].
+All weights and biases of the Layer are randomly initialized on the uniform interval [-`initialization_scale_factor`, `initialization_scale_factor`].
+
+<details>
+<summary>Implementation Details</summary>
+
+The activation function is set to the identity activation function, f(x)=x, which does nothing.
+
+</details>
+<br>
 
 **Parameters**
 
 * `input_dimension` (`int`): Number of inputs that the Layer takes in. Must be positive.
 * `output_dimension` (`int`): Number of outputs that the Layer gives. Must be positive.
 * `name` (`std::string`): Identifier for this Layer. Default: `"layer"`
+* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
 
 ---
 
 #### With activation function
 
-*Signature:* `Layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer")`
+*Signature:* `Layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer", int initialization_scale_factor = 1)`
 
-Creates a new Layer and loads it with the provided fields. All elements in the Layer's weights and biases are randomly initialized in the uniform range [-1, 1].
+Creates a new Layer and loads it with the provided fields.
+
+All weights and biases of the Layer are randomly initialized on the uniform interval [-`initialization_scale_factor`, `initialization_scale_factor`].
 
 **Parameters**
 
@@ -940,6 +965,7 @@ Creates a new Layer and loads it with the provided fields. All elements in the L
 * `output_dimension` (`int`): Number of outputs that the Layer gives. Must be positive.
 * `activation_function` (`std::shared_ptr<ActivationFunction>`): Smart pointer to activation function object to use.
 * `name` (`std::string`): Identifier for this Layer. Default: `"layer"`
+* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
 
 ---
 

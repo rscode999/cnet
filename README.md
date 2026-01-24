@@ -1,6 +1,9 @@
 # CNet
 **C++ framework for writing neural networks**
 
+**NOTICE: Batch training using the single-input `forward`/`reverse` methods is now deprecated!  
+Using the single-input training methods will not train in batches. Trying to get or set an Optimizer's batch size causes a `std::runtime_error`.**
+
 By using, viewing, or contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
 Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
 
@@ -29,7 +32,7 @@ This project requires the Eigen 3 linear algebra package.
 After pulling this repo, download Eigen 3:
 [zip](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip), [tar.gz](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz),
 [Eigen website](https://eigen.tuxfamily.org/index.php?title=Main_Page).
-Then, extract the archive and place the *entire* folder inside your cloned repo's top-level directory.
+Then, extract the archive and place the *entire* folder (without removing the contents) inside your cloned repo's top-level directory.
 
 Directory structure should be as follows:
 ```
@@ -49,7 +52,7 @@ To use CNet in your program, include the "core.cpp" file in the "cnet" directory
 ```
 #include "cnet/core.cpp"
 ```
-Note: This include statement automatically imports Eigen functionality.
+Note: This `include` statement automatically imports Eigen functionality.
 
 Including "cnet/network.cpp" does not include saving and loading networks from files.
 

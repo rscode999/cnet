@@ -12,7 +12,7 @@ network.set_optimizer(sgd_optim_ptr);
 ```
 Note: Only a concrete subclass of Optimizer may be created. The Optimizer is an abstract class, so directly instantiating `Optimizer` causes an error.
 
-Using an external smart pointer, an Optimizer's hyperparameters can be changed or retrieved.  
+By retaining the Network's Optimizer smart pointer, an Optimizer's hyperparameters can be changed or retrieved.  
 Setting hyperparameters can also be done through the Network, with the Network's method `set_optimizer_hyperparameters`.
 
 <br>
@@ -130,13 +130,10 @@ If not overridden, this method returns "optimizer".
 
 ## SGD
 
-Uses Stochastic Gradient Descent (SGD) optimization on a Network.  
+Implements classical Stochastic Gradient Descent (SGD) with momentum.  
 The SGD optimizer has an adjustable learning rate and momentum coefficient.
 
-
-On construction, SGD optimizers have an additional parameter, `batch_size`, allowing for batch training.  
-The optimizer updates weights and biases on every `batch_size`-th input.  
-No updates occur on inputs other than every `batch_size`-th input.
+When training in batches, SGD optimizers take the average of losses and momentums across the batch.
 
 ---
 
@@ -160,11 +157,9 @@ Constructs a new SGD optimizer using the given hyperparameters.
 
 #### batch\_size
 
-DEPRECATED!
+DEPRECATED! Batch training is implemented as a multithreaded operation.
 
 Calling this method causes a `std::runtime_error`.
-
-Batch training is implemented as a multithreaded operation.
 
 ---
 
@@ -234,11 +229,9 @@ The information includes the optimizer's name (`"sgd"`), learning rate, and mome
 
 #### set\_batch\_size
 
-DEPRECATED!
+DEPRECATED! Batch training is implemented as a multithreaded operation.
 
 Calling this method causes a `std::runtime_error`.
-
-Batch training is implemented as a multithreaded operation.
 
 ---
 
@@ -251,8 +244,6 @@ Sets the optimizer's hyperparameters using the values from `hyperparameters`.
 For SGD optimizers, `hyperparameters` must be of length 2.   
 Index 0 contains the new *learning rate* to set. It must be positive.  
 Index 1 contains the new *momentum coefficient*. It must be non-negative.  
-
-If the batch size is changed, the optimizer's internal training data (i.e. momentum, intermediate layer outputs, number of samples trained so far) is reset.
 
 Required contents of `hyperparameters`: {new learning rate, new momentum coefficient}
 

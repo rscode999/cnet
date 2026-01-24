@@ -259,7 +259,7 @@ void test_training_binconvert() {
 
     Network net = Network();
 
-    shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9); //Change to SGD or BatchSGD as needed.
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9);
     net.set_optimizer(optimizer);
     optimizer.reset();
 
@@ -599,6 +599,104 @@ void test_file_load() {
 
 
 
+/**
+ * Trains on the binary to one-hot dataset, but with multithreaded batch training
+ */
+void test_batch_training() {
+    const int N_INPUTS = 5; //Arbitary positive constant
+    const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
+    const int N_EPOCHS = 2000000; //Positive constant
+
+    Network net = Network();
+
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.0005, 0.9);
+    net.set_optimizer(optimizer);
+    optimizer.reset();
+
+    shared_ptr<CrossEntropy> loss_calc = make_shared<CrossEntropy>(); //Switch with MSE. Should get ~1/3 correct
+    net.set_loss_calculator(loss_calc);
+    //Keep the loss calculator outside the network for per-epoch loss calculations
+
+    //add layers
+    shared_ptr<Relu> relu_activ = make_shared<Relu>();
+    shared_ptr<Softmax> softmax_activ = make_shared<Softmax>();
+    net.add_layer(N_INPUTS, 20, relu_activ, "layer0");
+    net.add_layer(20, 40, relu_activ, "layer1"); //test: change to softmax and ensure the "enable" check fails
+    net.add_layer(40, 40, relu_activ);
+    net.add_layer(40, 40, relu_activ);
+    net.add_layer(40, 40, relu_activ);
+    net.add_layer(40, 40, relu_activ);
+    net.add_layer(40, 40, relu_activ);
+    net.add_layer(40, N_OUTPUTS, softmax_activ, "layer2");
+    relu_activ.reset();
+    softmax_activ.reset();
+
+    //get inputs and corresponding expected outputs
+    vector<vector<VectorXd>> inputs;
+    vector<vector<VectorXd>> expected_outputs;
+    const int BATCH_SIZE = 64;
+    for(int i = 0; i < N_OUTPUTS / BATCH_SIZE; i++) {
+        vector<VectorXd> current_input;
+        vector<VectorXd> current_expected_output;
+        for(int b = 0; b < BATCH_SIZE; b++) {
+            current_input.push_back(decimal_to_binary(N_INPUTS, i * BATCH_SIZE + b));
+            current_expected_output.push_back(one_hot_vectorxd(N_OUTPUTS, i * BATCH_SIZE + b));
+        }
+        
+        inputs.push_back(current_input);
+        expected_outputs.push_back(current_expected_output);
+    }
+
+    //enable training
+    net.enable();
+
+    cout << "Training started for " << N_INPUTS << " inputs, " << N_EPOCHS << " epochs" << endl;
+
+    //train
+    for(int e = 1; e <= N_EPOCHS; e++) {
+
+        double current_loss = 0;
+        for(int i = 0; i < N_OUTPUTS / BATCH_SIZE; i++) {
+            vector<VectorXd> current_outputs = net.forward(inputs[i], true, BATCH_SIZE);
+            net.reverse(current_outputs, expected_outputs[i], BATCH_SIZE);
+
+            for(int l = 0 ; l < current_outputs.size(); l++) {
+                current_loss += loss_calc->compute_loss(current_outputs[l], expected_outputs[i][l]);
+            }
+        }
+
+        if(e%2000==0) {
+            cout << "Total loss for " << e << " epochs: " << current_loss << endl;
+        }
+    }
+
+
+    //test model on each of the inputs. Model output is determined to be the maximum value.
+    int n_correct = 0;
+    for(int i=0; i<N_OUTPUTS; i++) {
+        VectorXd test_input = decimal_to_binary(N_INPUTS, i);
+        VectorXd test_output = net.forward(test_input, false);
+
+        //find maximum index
+        double max = -99999;
+        int max_index = -1;
+        for(int v=0; v<test_output.size(); v++) {
+            if(test_output(v) > max) {
+                max = test_output(v);
+                max_index = v;
+            }
+        }
+        cout << "Max for " << i << ": " << max_index << endl;
+
+        //update number of correct predictions
+        if(max_index == i) {
+            n_correct++;
+        }
+    }
+    cout << "Number correct: " << n_correct << " out of " << N_OUTPUTS << endl;
+}
+
+
 int main() {
     //Call testing functions as you wish.
 
@@ -609,4 +707,5 @@ int main() {
     // test_add_remove();
     // test_hot_swap();
     // test_file_load();
+    test_batch_training();
 }

@@ -6,3 +6,4 @@
 2025-09-18: Got into a project team after 5 semesters of applying
 2025-09-18: Finished optimizer hyperparameter adjustments. Ready for v1.0 release, which was pushed back 4 days
 2025-09-26: Finished batch training
+2026-01-24: Finished multithreaded batch training
