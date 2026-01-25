@@ -605,11 +605,11 @@ void test_file_load() {
 void test_batch_training() {
     const int N_INPUTS = 5; //Arbitary positive constant
     const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
-    const int N_EPOCHS = 2000000; //Positive constant
+    const int N_EPOCHS = 2000; //Positive constant
 
     Network net = Network();
 
-    shared_ptr<SGD> optimizer = make_shared<SGD>(0.0005, 0.9);
+    shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9);
     net.set_optimizer(optimizer);
     optimizer.reset();
 
@@ -622,11 +622,6 @@ void test_batch_training() {
     shared_ptr<Softmax> softmax_activ = make_shared<Softmax>();
     net.add_layer(N_INPUTS, 20, relu_activ, "layer0");
     net.add_layer(20, 40, relu_activ, "layer1"); //test: change to softmax and ensure the "enable" check fails
-    net.add_layer(40, 40, relu_activ);
-    net.add_layer(40, 40, relu_activ);
-    net.add_layer(40, 40, relu_activ);
-    net.add_layer(40, 40, relu_activ);
-    net.add_layer(40, 40, relu_activ);
     net.add_layer(40, N_OUTPUTS, softmax_activ, "layer2");
     relu_activ.reset();
     softmax_activ.reset();
@@ -634,7 +629,8 @@ void test_batch_training() {
     //get inputs and corresponding expected outputs
     vector<vector<VectorXd>> inputs;
     vector<vector<VectorXd>> expected_outputs;
-    const int BATCH_SIZE = 64;
+    const int BATCH_SIZE = N_OUTPUTS / 4;
+    assert(BATCH_SIZE > 0 && "Test invalid- batch size is zero");
     for(int i = 0; i < N_OUTPUTS / BATCH_SIZE; i++) {
         vector<VectorXd> current_input;
         vector<VectorXd> current_expected_output;
@@ -657,7 +653,7 @@ void test_batch_training() {
 
         double current_loss = 0;
         for(int i = 0; i < N_OUTPUTS / BATCH_SIZE; i++) {
-            vector<VectorXd> current_outputs = net.forward(inputs[i], true, BATCH_SIZE);
+            vector<VectorXd> current_outputs = net.forward(inputs[i], BATCH_SIZE, true);
             net.reverse(current_outputs, expected_outputs[i], BATCH_SIZE);
 
             for(int l = 0 ; l < current_outputs.size(); l++) {
@@ -665,7 +661,7 @@ void test_batch_training() {
             }
         }
 
-        if(e%2000==0) {
+        if(e%200==0) {
             cout << "Total loss for " << e << " epochs: " << current_loss << endl;
         }
     }

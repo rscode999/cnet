@@ -610,7 +610,7 @@ To use this method, the network must be disabled.
 
 Returns the output of the network for a given input.
 
-If `training` is true, intermediate outputs are stored, allowing `{networkName}.reverse` (for single inputs) to be called. The network is prepared for *single-input* backpropagation.   
+If `training` is true, intermediate outputs are stored, allowing `{networkName}.reverse` (for single inputs) to be called. The network is prepared for *single-input, non-batch* backpropagation.   
 Otherwise, the network does not store intermediate outputs, saving memory and computation time.
 
 **Returns**
@@ -641,15 +641,17 @@ If `training` is true, intermediate outputs are stored for backpropagation, allo
 All data from previous calls to `forward` is erased.     
 Otherwise, the network does not store intermediate outputs, saving memory and computation time.
 
+*Ensure you double-check the order of `threads` and `training`. Confusing the order will cause silent errors.*
+
 **Returns**
 
-* `std::vector<Eigen::VectorXd>`: Network's predictions for the given input
+* `std::vector<Eigen::VectorXd>`: Network's predictions for each corresponding input
 
 **Parameters**
 
-* `input` (`const std::vector<Eigen::VectorXd>&`): List of input vectors to the network.
-* `n_threads` (`int`): Number of threads to use. Must be positive. Default 1.
-* `training` (`bool`): Whether the network is in training mode. Default: `true`.
+* `input` (`const std::vector<Eigen::VectorXd>&`): List of input vectors to the network. Cannot be empty, and each element must be of size `{networkName}.input_dimension()`.
+* `n_threads` (`int`): Number of threads to use. Must be on the interval [1, `inputs.size()`]. Default 1.
+* `training` (`bool`): Whether the network stores data for backpropagation. Default: `true`.
 
 **Exceptions**
 
@@ -723,9 +725,9 @@ If these conditions are not met, the method throws `illegal_state`.
 
 **Parameters**
 
-* `predictions` (`const std::vector<Eigen::VectorXd>&`): Predicted outputs from the network. Each element must have `{networkName}.output_dimension()` elements.
-* `actuals` (`const std::vector<Eigen::VectorXd>&`): Expected outputs that the network should have produced. Must be the same length as `predictions`, and each element must have `{networkName}.output_dimension()` elements
-* `n_threads` (`int`): Number of threads to use. Must be positive. Default 1.
+* `predictions` (`const std::vector<Eigen::VectorXd>&`): Predicted outputs from the network. Cannot be empty, and each element must have `{networkName}.output_dimension()` elements.
+* `actuals` (`const std::vector<Eigen::VectorXd>&`): Expected outputs that the network should have produced. Must have the same size as `predictions`, and each element must have `{networkName}.output_dimension()` elements
+* `n_threads` (`int`): Number of threads to use. Must be on the interval [1, `predictions.size()`]. Default 1.
 
 **Exceptions**
 

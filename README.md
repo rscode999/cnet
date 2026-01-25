@@ -167,7 +167,26 @@ expected_output << 1, 1;
 net.reverse(predictions, expected_output);
 ```
 
-Note: For SGD optimizers, if the batch size is greater than 1, changes are made every `batch_size` samples. If the number of samples trained so far is not a multiple of `batch_size`, the network will not be changed.
+To train in minibatches, using CNet's multithreading capability:
+```
+//Create a std::vector of inputs
+std::vector<Eigen::VectorXd> inputs;
+for(int i = 0; i < TRAIN_SIZE; i++) {
+    Initialize the inputs...
+}
+
+//Create the expected outputs
+std::vector<Eigen::VectorXd> expected_outputs;
+for(int i = 0; i < TRAIN_SIZE; i++) {
+    Initialize the outputs...
+}
+
+//Compute forward pass on the inputs, with 4 threads
+std::vector<Eigen::VectorXd> actual_outputs = net.forward(inputs, 4);
+
+//Compute reverse pass on the outputs and expected inputs, with 4 threads
+net.reverse(actual_outputs, expected_outputs, 4);
+```
 
 To evaluate performance without training:
 ```

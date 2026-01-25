@@ -10,6 +10,8 @@ Example with SGD optimizer:
 std::shared_ptr<SGD> sgd_optim_ptr = std::make_shared<SGD>();
 network.set_optimizer(sgd_optim_ptr);
 ```
+Use the Optimizer through the Network's methods.
+
 Note: Only a concrete subclass of Optimizer may be created. The Optimizer is an abstract class, so directly instantiating `Optimizer` causes an error.
 
 By retaining the Network's Optimizer smart pointer, an Optimizer's hyperparameters can be changed or retrieved.  

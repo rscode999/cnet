@@ -679,8 +679,10 @@ public:
      * 
      * Requires that the network is enabled. If not, the method throws `illegal_state`.
      * 
-     * @param inputs inputs to the network. Each element must have `{networkName}.input_dimension()` rows
-     * @param n_threads number of threads to use. Must be positive. Default 1
+     * IMPORTANT: Double check the order of `n_threads` and `training`. Booleans are effectively integers.
+     * 
+     * @param inputs inputs to the network. Cannot be empty, and each element must have `{networkName}.input_dimension()` rows
+     * @param n_threads number of threads to use. Must be on the interval [1, `inputs.size()`]. Default 1
      * @param training true if training the network, false if getting results for evaluation only. Default: `true`
      * @return the network's output, as a std::vector<Eigen::VectorXd>, whose elements are of dimension `{networkName}.output_dimension()`
      * @throws `illegal_state` if the network is not enabled
@@ -689,8 +691,9 @@ public:
         using namespace std;
         using namespace Eigen;
 
-        assert(n_threads > 0 && "Number of threads for multi-input forward pass must be positive");
-
+        assert(inputs.size() > 0 && "Inputs list cannot be empty");
+        assert(n_threads > 0 && n_threads <= inputs.size() && "Number of threads in multi-input reverse operation must be between 1 and `inputs.size()`");
+        
         //Enable check
         if(!enabled) {
             throw illegal_state("Network forward and predict operation requires the network to be enabled");
@@ -816,6 +819,7 @@ public:
         optim->step(layers, initial_inputs[0], intermediate_outputs[0], predictions, actuals, loss_calc);
     }
 
+
     /**
      * Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
      * 
@@ -823,14 +827,16 @@ public:
      * with `training`=true must have been called since the network was enabled.
      * If these conditions are not met, the method throws `illegal_state`.
      * 
-     * @param predictions what the network predicts for a given input. All elements must be of dimension `{networkName}.output_dimension`
+     * @param predictions what the network predicts for a given input. Cannot be empty, and all elements must be of dimension `{networkName}.output_dimension`
      * @param actuals expected output for the network's prediction. Must be of the same length as `predictions`, and all elements must be of dimension `{networkName}.output_dimension`
-     * @param n_threads number of threads to use. Must be positive. Default 1.
+     * @param n_threads number of threads to use. Must be on the interval [1, `predictions.size()`]. Default 1.
      * @throws `illegal_state` if the network is not enabled, or a feed-forward training operation on many inputs was not done
      */
     void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int n_threads = 1) {
         using namespace Eigen;
 
+        assert(predictions.size() > 0 && "Predictions list for reverse batch training cannot be empty");
+        assert(actuals.size() > 0 && "Actuals list for reverse batch training cannot be empty");
         assert(predictions.size() == actuals.size() && "Sizes of the predictions and actuals vectors must be equal");
         #ifndef NDEBUG //This is wacked.
             for(const VectorXd& p : predictions) {
@@ -840,7 +846,7 @@ public:
                 assert(a.size() == output_dimension() && "Multi-input reverse operation requires all actuals' dimensions to equal `output_dimension()`");
             }
         #endif 
-        assert(n_threads > 0 && "Number of threads in multi-input reverse operation must be positive");
+        assert(n_threads > 0 && n_threads <= predictions.size() && "Number of threads in multi-input reverse operation must be between 1 and `predictions.size()`");
         
         //Enable check
         if(!enabled) {
@@ -861,7 +867,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////
-    //OPERATOR OVERRIDES
+    //OPERATOR OVERLOADS
 
     /**
      * Adds `new_layer` as the final layer of the network.
