@@ -5,7 +5,7 @@
 #include <thread>
 #include <vector>
 
-#include <iostream>
+#pragma once
 
 
 namespace CNet {

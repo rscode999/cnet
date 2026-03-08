@@ -1111,7 +1111,7 @@ Sets the layer's weight matrix.
 
 #### forward
 
-*Signature:* `Eigen::VectorXd forward(const Eigen::VectorXd& input)`
+*Signature:* `Eigen::VectorXd forward(const Eigen::VectorXd& input) const`
 
 Returns the result of the linear forward operation for the given input. Does not perform any other operations.
 
@@ -1134,6 +1134,30 @@ The `Network` (as opposed to each individual `Layer`) applies activations, so th
 **Parameters**
 
 * `input` (`const Eigen::VectorXd&`): Input column vector. Must have `{layerName}.input_dimension()` elements.
+
+---
+
+#### reverse
+
+*Signature:* `Eigen::VectorXd reverse(const Eigen::VectorXd& input) const`
+
+Returns the result of the linear reverse (backpropagation) operation for the given input.
+
+<details>
+<summary>Implementation Details</summary>
+
+All data for training (i.e. intermediate layer outputs) is stored in a `Network` object beforehand. An `Optimizer` is responsible for using the training data.
+
+</details>
+<br>
+
+**Returns**
+
+* `Eigen::VectorXd`: Resulting vector of length `{layerName}.input_dimension()`.
+
+**Parameters**
+
+* `input` (`const Eigen::VectorXd&`): Input column vector. Must have `{layerName}.output_dimension()` elements.
 
 ---
 

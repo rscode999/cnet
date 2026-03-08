@@ -2,9 +2,7 @@
 
 #include <memory>
 
-#include <Eigen/Core>
-
-
+#pragma once
 
 namespace CNet {
 
@@ -251,12 +249,29 @@ public:
      * @param input vector to apply the forward operation to. Must have `{layerName}.input_dimension()` elements
      * @return vector, of length `{layerName}.output_dimension()`, after `input`'s forward process
      */
-    Eigen::VectorXd forward(const Eigen::VectorXd& input) {
+    Eigen::VectorXd forward(const Eigen::VectorXd& input) const {
         assert((input.cols() == 1 && "The forward process's input must be a column vector"));
         assert((input.rows() == input_dimension() && "Forward process's input vector must have dimension equal to the weight matrix's number of columns"));
 
         return ((weights * input) + biases).eval();
     }
+
+
+    /**
+     * Returns the result of the layer's reverse (backpropagation) operation on `input`.
+     * 
+     * Transforms a `{layerName}.output_dimension()` column vector into a `{layerName}.input_dimension()` vector.
+     * 
+     * @param input vector to apply the reverse operation to. Must have `{layerName}.output_dimension()` elements
+     * @return vector, of length `{layerName}.input_dimension()`, after `input`'s reverse process
+     */
+    Eigen::VectorXd reverse(const Eigen::VectorXd& input) const {
+        assert(input.cols() == 1 && "Layer backward process's input must be a column vector");
+        assert(input.rows() == output_dimension() && "Layer reverse process's input vector must have dimension equal to the layer's output dimension");
+
+        return weights.transpose() * input;
+    }
+
 
 
     /**

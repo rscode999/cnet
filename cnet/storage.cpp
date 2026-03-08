@@ -4,6 +4,7 @@
 
 #include "network.cpp"
 
+#pragma once
 
 
 namespace CNet {

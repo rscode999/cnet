@@ -1,6 +1,8 @@
 #include "optimizer.cpp"
 #include <stdexcept>
 
+#pragma once
+
 /**
  * Thrown to indicate that the network is not in the proper state to call a method.
  * 

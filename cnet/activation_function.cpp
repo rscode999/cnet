@@ -1,11 +1,10 @@
 #include <cmath>
 #include <memory>
-#include <set>
 #include <string>
 
 #include <Eigen/Core>
 
-
+#pragma once
 
 namespace CNet {
 
