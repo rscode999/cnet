@@ -1,14 +1,13 @@
 #include "activation_function.cpp"
 
-#include <memory>
-
 #pragma once
+
 
 namespace CNet {
 
 
 
-    
+
 /**
  * Utility struct for storing pre-activation results, post-activation results, and weight matrices
  * at each step of the forward process.
@@ -85,12 +84,18 @@ public:
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
-        weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
-        biases  = Eigen::MatrixXd::Random(output_dimension, 1);
-        //Scale them
-        weights *= initialization_scale_factor;
-        biases *= initialization_scale_factor;
-        
+        #ifdef USING_EIGENLITE
+            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension, initialization_scale_factor, Eigen::MatrixTag{});
+            biases  = Eigen::VectorXd::Random(output_dimension, initialization_scale_factor, Eigen::VectorTag{});
+        #else
+            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
+            biases  = Eigen::VectorXd::Random(output_dimension, initialization_scale_factor);
+
+            //Scale them
+            weights = weights * initialization_scale_factor;
+            biases = biases * initialization_scale_factor;
+        #endif
+
         //set functions to default
         activation_fcn = std::make_shared<IdentityActivation>();
 
@@ -120,11 +125,19 @@ public:
         assert((output_dimension>0 && "Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
-        weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
-        biases  = Eigen::VectorXd::Random(output_dimension);
-        //Scale them
-        weights *= initialization_scale_factor;
-        biases *= initialization_scale_factor;
+        #ifdef USING_EIGENLITE
+            //Eigen Lite version: Directly use the initialzation scale factor in the Random matrix creation
+            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension, initialization_scale_factor, Eigen::MatrixTag{});
+            biases  = Eigen::VectorXd::Random(output_dimension, initialization_scale_factor, Eigen::VectorTag{});
+        #else
+            //Standard Eigen: Random matrix + separate addition of initialization scale factor
+            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
+            biases  = Eigen::VectorXd::Random(output_dimension, initialization_scale_factor);
+
+            //Scale them
+            weights = weights * initialization_scale_factor;
+            biases = biases * initialization_scale_factor;
+        #endif
         
         //initialize activation function
         activation_fcn = activation_function;
@@ -249,12 +262,13 @@ public:
      * @param input vector to apply the forward operation to. Must have `{layerName}.input_dimension()` elements
      * @return vector, of length `{layerName}.output_dimension()`, after `input`'s forward process
      */
-    Eigen::VectorXd forward(const Eigen::VectorXd& input) const {
+    Eigen::VectorXd forward(const Eigen::VectorXd& input) {
         assert((input.cols() == 1 && "The forward process's input must be a column vector"));
         assert((input.rows() == input_dimension() && "Forward process's input vector must have dimension equal to the weight matrix's number of columns"));
 
-        return ((weights * input) + biases).eval();
+        return ((weights * input) + biases);
     }
+
 
 
     /**
@@ -272,7 +286,7 @@ public:
         return weights.transpose() * input;
     }
 
-
+    
 
     /**
      * Exports `layer` to the output stream `output_stream`, returning a reference to `output_stream` with `layer` added.

@@ -3,12 +3,6 @@
 
 Documentation for each class and its methods.
 
-To use in your program, include the "cnet/core.cpp" file. Example: `#include "cnet/core.cpp"`
-
-All classes and methods are in the `CNet` namespace. The only class or method not in `CNet` is the `illegal_state` exception, which is not in a namespace.
-
-Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).
-
 <details>
   <summary>Implementation Details</summary>
   
@@ -17,6 +11,32 @@ Implementation Details include where a class or method is defined, or informatio
 
 </details>
 <br>
+
+To use in your program, include the "cnet/core.cpp" file. Example: `#include "cnet/core.cpp"`
+
+All classes and methods are in the `CNet` namespace. The only class or method not in `CNet` is the `illegal_state` exception, which is not in a namespace.
+
+Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).  
+All Eigen functionality needed for CNet is supported in Eigen Lite, included with this repo. Import Eigen Lite in the same way Eigen would be imported.
+
+<details>
+  <summary>IMPORTANT NOTE for development using Eigen + Eigen Lite</summary>
+  
+Eigen Lite supports all required functionality in Eigen. Some Eigen methods, such as `dot` and `array`, are not supported in Eigen Lite. 
+
+If you want to support functionality supported in Eigen, but not in Eigen Lite, use conditional compilation with `USING_EIGENLITE`, a macro defined in Eigen Lite's source files.  
+Example:
+```
+#ifdef USING_EIGENLITE
+  Functionality using Eigen Lite's limited instructions...
+#else
+  Functionality using Eigen's full suite of methods...
+#endif
+```
+
+</details>
+<br>
+
 
 [Back to README](../README.md)
 
@@ -1143,10 +1163,12 @@ The `Network` (as opposed to each individual `Layer`) applies activations, so th
 
 Returns the result of the linear reverse (backpropagation) operation for the given input.
 
+**Does not** apply activation functions.
+
 <details>
 <summary>Implementation Details</summary>
 
-All data for training (i.e. intermediate layer outputs) is stored in a `Network` object beforehand. An `Optimizer` is responsible for using the training data.
+All data for training (i.e. intermediate layer outputs) is stored in a `Network` object during the forward operation. An `Optimizer` is responsible for using the training data.
 
 </details>
 <br>

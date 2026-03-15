@@ -1,4 +1,5 @@
 #include <string>
+
 #include <Eigen/Core>
 
 #pragma once
@@ -88,12 +89,23 @@ public:
 
         // To avoid log(0), add small epsilon
         constexpr double epsilon = 1e-12;
+        
+        //Clamp predictions to [epsilon, 1.0] then calculate loss
 
-        // Clamp predictions to [epsilon, 1.0]
-        Eigen::VectorXd clipped_preds = predictions.array().max(epsilon).min(1.0);
+        #ifdef USING_EIGENLITE
+            
+            Eigen::VectorXd clipped_preds = predictions.max(1.0).min(epsilon);
 
-        // Cross-entropy loss: -sum(actual * log(predictions))
-        double loss = -(actuals.array() * clipped_preds.array().log()).sum();
+            
+            double loss = -actuals.cwiseProduct(clipped_preds.log()).sum();
+
+        #else
+        //Standard Eigen version requires calls to `array`
+            Eigen::VectorXd clipped_preds = predictions.array().max(epsilon).min(1.0);
+
+            // Cross-entropy loss: -sum(actual * log(predictions))
+            double loss = -(actuals.array() * clipped_preds.array().log()).sum();
+        #endif
 
         return loss;
     }
@@ -114,7 +126,7 @@ public:
         assert((predictions.rows() == actuals.rows() && "Number of rows in predictions and actuals must be equal"));
 
         // Gradient = predictions - actuals
-        return (predictions - actuals).col(0);  // Return Eigen::VectorXd
+        return (predictions - actuals);  // Return Eigen::VectorXd
     }
 
     /**
@@ -175,7 +187,7 @@ public:
         assert((actuals.cols() == 1 && "Actuals must be a column vector"));
         assert((predictions.rows() == actuals.rows() && "Predictions and actuals must have the same dimension for gradient calculation"));
 
-        return(2.0 / predictions.rows()) * (predictions - actuals);
+        return (2.0 / predictions.rows()) * (predictions - actuals);
     }
 
 

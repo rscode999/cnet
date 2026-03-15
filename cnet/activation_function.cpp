@@ -1,10 +1,11 @@
-#include <cmath>
 #include <memory>
+#include <set>
 #include <string>
 
 #include <Eigen/Core>
 
 #pragma once
+
 
 namespace CNet {
 
@@ -128,10 +129,11 @@ public:
      * @return ReLU applied to the input element-wise
      */
     Eigen::VectorXd compute(const Eigen::VectorXd& input) const override {
-        return input.unaryExpr([](double x) {
-                return (x<0) ? 0.0 : x;
-            }
-        );
+        Eigen::VectorXd output(input.size());
+        for (int i = 0; i < input.size(); i++) {
+            output(i) = (input(i) < 0) ? 0.0 : input(i);
+        }
+        return output;
     }
 
     /**
@@ -143,10 +145,11 @@ public:
      * @return for each element, 1 if `input` >= 0, else 0.
      */
     Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const override {
-        return input.unaryExpr([](double x) {
-                return (x<0) ? 0.0 : 1.0;
-            }
-        );
+        Eigen::VectorXd output(input.size());
+        for (int i = 0; i < input.size(); i++) {
+            output(i) = (input(i) < 0) ? 0.0 : 1.0;
+        }
+        return output;
     }
 
     /**
@@ -197,7 +200,19 @@ public:
      */
     Eigen::VectorXd compute_derivative(const Eigen::VectorXd& input) const override {
         Eigen::VectorXd sig = compute(input);
-        return sig.array() * (1.0 - sig.array());
+
+        //Return value depends on whether Eigen Lite or standard Eigen is used. Eigen Lite doesn't have an `array` method
+        #ifdef USING_EIGENLITE
+            return sig.cwiseProduct(1.0 - sig);
+        #else
+            return sig.array() * (1.0 - sig.array());
+        #endif
+        /*
+        In Eigen Lite, the line sig.cwiseProduct(1.0 - sig); caused an assertion failure in the line:
+        delta = delta.cwiseProduct(previous_activation->compute_derivative(previous_layer_output));
+        of optimizer.cpp
+        Cause- Eigen supports implicit element-wise multiplications, but Eigen Lite does not.
+        */
     }
 
     std::string name() const override {
@@ -233,10 +248,18 @@ public:
      * @return Softmax computed element-wise over the entire vector
      */
     Eigen::VectorXd compute(const Eigen::VectorXd& input) const override {
-        Eigen::VectorXd shifted = input.array() - input.maxCoeff();  // for numerical stability
-        Eigen::VectorXd exps = shifted.array().exp();
-        double sum = exps.sum();
-        return exps / sum;
+        #ifdef USING_EIGENLITE
+            Eigen::VectorXd shifted = input - input.maxCoeff();  // for numerical stability
+            Eigen::VectorXd exps = shifted.exp();
+            double sum = exps.sum();
+            return exps / sum;
+        #else
+            //Standard Eigen version requires conversion to an array
+            Eigen::VectorXd shifted = input.array() - input.maxCoeff();  // for numerical stability
+            Eigen::VectorXd exps = shifted.array().exp();
+            double sum = exps.sum();
+            return exps / sum;
+        #endif
     }
 
     /**

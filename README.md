@@ -1,8 +1,7 @@
 # CNet
 **C++ framework for writing neural networks**
 
-**NOTICE: Batch training using the single-input `forward`/`reverse` methods is now deprecated!  
-Using the single-input training methods will not train in batches. Trying to get or set an Optimizer's batch size causes a `std::runtime_error`.**
+**The Eigen 3 package is no longer required. You may use a minimized version of Eigen 3, called Eigen Lite, that comes with this repo. Note that not all Eigen operations, especially `array` and `dot`, are not supported in Eigen Lite.**
 
 By using, viewing, or contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
 Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
@@ -27,9 +26,9 @@ Using **the power of C++**, I created a neural network framework with these desi
 
 
 ## Setup Instructions
-This project requires the Eigen 3 linear algebra package.
+This project is based on the Eigen 3 linear algebra package. A minimized (but less optimized) version of Eigen 3, called Eigen Lite, is provided with the repo.
 
-After pulling this repo, download Eigen 3:
+After pulling this repo, you may want to download Eigen 3:
 [zip](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip), [tar.gz](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz),
 [Eigen website](https://eigen.tuxfamily.org/index.php?title=Main_Page).
 Then, extract the archive and place the *entire* folder (without removing the contents) inside your cloned repo's top-level directory.
@@ -39,13 +38,14 @@ Directory structure should be as follows:
 your-repo-name
 ├── cnet/
 ├── <EIGEN FOLDER GOES HERE>/
+├── eigenlite/
 ├── main.cpp
 ├── tests.cpp
 ├── README.md
 ...
 ```
 
-If you have GnuMake installed, change the `EIGEN_DIRECTORY_PATH` variable in the [Makefile](Makefile) to the name of your Eigen folder.  
+If you have GnuMake installed, change the `EIGEN_DIRECTORY_PATH` variable in the [Makefile](Makefile) to the name of your Eigen folder. If you wish to use Eigen Lite, change `EIGEN_DIRECTORY_PATH` to 'eigenlite'.  
 Your executable's name will be `OUTPUT_EXECUTABLE_NAME`.
 
 To use CNet in your program, include the "core.cpp" file in the "cnet" directory:
@@ -227,7 +227,7 @@ g++ main.cpp  -o cnet  -std=c++14  -I {name of Eigen 3 folder} -O2 -Wall -Werror
 
 ## Detailed Compilation Instructions
 
-If you have GnuMake installed, use the provided [Makefile](Makefile). There are 3 variables: `MAIN` (path to a file containing the `main` function), `OUTPUT_EXECUTABLE_NAME` (name of the output program), and `EIGEN_DIRECTORY_PATH` (path to your Eigen 3 directory, relative to the Makefile).  
+If you have GnuMake installed, use the provided [Makefile](Makefile). There are 3 variables: `MAIN` (path to a file containing the `main` function), `OUTPUT_EXECUTABLE_NAME` (name of the output program), and `EIGEN_DIRECTORY_PATH` (path to your Eigen 3 directory or the Eigen Lite directory, relative to the Makefile).  
 Change the variables to your main function file, output program name, and path to your Eigen directory.
 
 The Makefile offers 3 compilation options:
@@ -247,6 +247,10 @@ For the G++ compiler, the following command will compile `main.cpp` to an execut
 ```
 g++ main.cpp  -o cnet -std=c++14  -I  eigen/ -O2 -Wall -Werror -Wpedantic
 ```
+This command will compile using Eigen Lite:
+```
+g++ main.cpp  -o cnet -std=c++14  -I  eigenlite/ -O2 -Wall -Werror -Wpedantic
+```
 
 ## File Structure
 
@@ -262,7 +266,8 @@ Inside "cnet", there are 5 main components:
 For more details on what each class does, consult the [documentation](documentation/documentation.md).
 
 Other than "cnet", the top-level directory contains:
-- Your Eigen 3 installation, if you put Eigen in the correct location
+- `eigenlite/`, a minimized version of Eigen 3
+- Your Eigen 3 installation (optional), if you put Eigen in the correct location
 - `documentation/`, a directory containing detailed class and method documentation
 - `main.cpp`, for users to write their code
 - `tests.cpp`, containing pre-built tests of network functionality

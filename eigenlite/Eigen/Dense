@@ -1,0 +1,3 @@
+//just in case people decide to use Eigen/Dense
+#pragma once
+#include "matrix.cpp"

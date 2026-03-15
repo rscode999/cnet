@@ -76,43 +76,7 @@ std::vector<Eigen::VectorXd> decimal_to_even_count(int n_bits) {
 
 
 int main() {
-    
-    /*
-    TASK: Even Number Tracker
-
-    You are given `N_INPUTS` inputs, each of which can either be 0 or 1.
-
-    You have 1 output.
-    This output should be 1 if, out of the `N_INPUTS` inputs, an even number of them are 1.
-    Otherwise, the output should be 0.
-
-    Example if N_INPUTS = 4:
-    A possible input is [1, 0, 0, 0]. The output should be 0, because there is an odd number of 1's in the input.
-    Another input is [0, 1, 0, 1]. The output should be 1, because there is an even number of 1's in the input.
-
-    You are given `inputs`, to put in the network, and `expected_outputs`.
-    For every index `i` in `expected_outputs`, expected_outputs[i] is what should be the network output if `inputs[i]` is given as an input.
-
-    Train a neural network to the input data.
-    Then print the network's output for each value in `inputs`.
-
-    The headers <iostream>, <memory>, and <vector> are provided. The Eigen and std namespaces are used.
-    To make a shared smart pointer, use `shared_ptr {name} = make_shared<typename>(type's arguments...)`
-
-    For 5 inputs, this setup gave over 90% accuracy:
-        Layer 1: 5 -> 20, Relu activation
-        Layer 2: 20 -> 10, Sigmoid activation
-        Layer 3: 10 -> 1, no activation
-
-        Cross Entropy loss
-        SGD optimization, learning rate 0.0005, momentum coefficient 0.9
-        5,000 epochs of training
-    */
-
-    const int N_INPUTS = 5;
-
-    std::vector<Eigen::VectorXd> inputs = decimal_to_binary(N_INPUTS);
-    std::vector<Eigen::VectorXd> expected_outputs = decimal_to_even_count(N_INPUTS);
-
-    //Create, train, and evaluate your network here.
+    using namespace std;
+    using namespace Eigen;
+    using namespace CNet;
 }

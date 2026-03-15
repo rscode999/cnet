@@ -147,10 +147,15 @@ void test_training_xor() {
 
     //Add XOR inputs
     vector<VectorXd> inputs;
-    inputs.push_back(Vector2d(0,0));
-    inputs.push_back(Vector2d(0,1));
-    inputs.push_back(Vector2d(1,0));
-    inputs.push_back(Vector2d(1,1));
+    VectorXd v(2);
+    v << 0, 0;
+    inputs.push_back(v);
+    v << 0, 1;
+    inputs.push_back(v);
+    v << 1, 0;
+    inputs.push_back(v);
+    v << 1, 1;
+    inputs.push_back(v);
 
     //Add corresponding outputs
     vector<VectorXd> correct_outputs;
@@ -251,11 +256,13 @@ VectorXd one_hot_vectorxd(int n_indices, int input) {
  * Creates and trains a model to convert an input, in binary, to a one-hot output.
  * 
  * Uses ReLU and softmax activations, along with cross-entropy loss.
+ * 
+ * Note: When using Eigen Lite, loss after 200 epochs becomes ~0. Loss may not converge for N_INPUTS greater than 5.
  */
 void test_training_binconvert() {
-    const int N_INPUTS = 5; //Arbitary positive constant
+    const int N_INPUTS = 6; //Arbitary positive constant
     const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
-    const int N_EPOCHS = 2000; //Positive constant
+    const int N_EPOCHS = 1000; //Positive constant
 
     Network net = Network();
 
@@ -302,7 +309,7 @@ void test_training_binconvert() {
             net.reverse(current_result, expected_outputs[i]);
         }
 
-        if(e%200==0) {
+        if(e % 200 == 0) {
             cout << "Total loss for " << e << " epochs: " << current_loss << endl;
         }
     }
@@ -323,7 +330,11 @@ void test_training_binconvert() {
                 max_index = v;
             }
         }
-        cout << "Max for " << i << ": " << max_index << endl;
+        cout << "Max for " << i << ": " << max_index;
+        if(i != max_index) {
+            cout << " (WRONG)";
+        }
+        cout << endl;
 
         //update number of correct predictions
         if(max_index == i) {
@@ -572,10 +583,10 @@ void test_file_load() {
     cout << net2 << "\n" << endl;
 
     // Layers, loss calculator, optimizer
-    shared_ptr<Relu> relu = make_shared<Relu>();
+    shared_ptr<Relu> relu = make_shared<Relu>(); //Change activation fcn. as needed
     net.add_layer(2, 3, relu, "my relu layer");
     net.add_layer(3, 3);
-    net.set_loss_calculator(make_shared<MeanSquaredError>());
+    net.set_loss_calculator(make_shared<CrossEntropy>()); //Change the loss calculator as needed
     net.set_optimizer(make_shared<SGD>(0.01, 0.9));
     store_network_config("test.txt", net);
     net2 = load_network_config("test.txt");
@@ -589,7 +600,8 @@ void test_file_load() {
 
     //Layers, but no optimizer or loss calculator
     net = Network();
-    net.add_layer(1, 1, " a ");
+    shared_ptr<Sigmoid> sigmoid = make_shared<Sigmoid>();
+    net.add_layer(1, 1, sigmoid, " a ");
     net.add_layer(1, 3, "hello world");
     // cout << net << endl;
     store_network_config("test.txt", net);
@@ -699,9 +711,9 @@ int main() {
     // test_xor_1layer();
     // test_xor_2layer();
     // test_training_xor();
-    // test_training_binconvert();
+    test_training_binconvert();
     // test_add_remove();
     // test_hot_swap();
     // test_file_load();
-    test_batch_training();
+    // test_batch_training();
 }

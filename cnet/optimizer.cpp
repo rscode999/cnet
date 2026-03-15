@@ -10,10 +10,7 @@
 
 namespace CNet {
 
-/**
- * Gives the minimum of the two arguments
- */
-#define min(a, b) ( (a) < (b) ? (a) : (b) )
+    
 
 
 /**
@@ -129,9 +126,6 @@ public:
  * A Stochastic Gradient Descent (SGD) optimizer, capable of training in batches.
  *
  * The optimizer has an adjustable learning rate and momentum coefficient.
- *   
- * The optimizer updates weights and biases on every `batch_size`-th input.
- * No updates occur on inputs other than ever `batch_size`-th input.
  */
 class SGD : public Optimizer {
 
@@ -208,8 +202,14 @@ private:
      * @return Jacobian from `softmax_output` * `loss_grad`
      */
     Eigen::VectorXd softmax_jacobian_vector_product(const Eigen::VectorXd& softmax_out, const Eigen::VectorXd& loss_grad) const {
-        double dot = softmax_out.dot(loss_grad);
-        return softmax_out.array() * (loss_grad.array() - dot);
+        //Eigen Lite version doesn't have the `dot` or `array` method
+        #ifdef USING_EIGENLITE
+            double dot = softmax_out.cwiseProduct(loss_grad).sum(); //Takes dot product
+            return softmax_out * (loss_grad - dot);
+        #else
+            double dot = softmax_out.dot(loss_grad);
+            return softmax_out.array() * (loss_grad.array() - dot);
+        #endif
     }
 
 public:
@@ -219,7 +219,7 @@ public:
     //CONSTRUCTOR
 
     /**
-     * Creates a new SGD optimizer, loading it with the given hyperparameters `learning_rate`, `momentum_coefficient`, and `batch_size`.
+     * Creates a new SGD optimizer, loading it with the given hyperparameters `learning_rate`, and `momentum_coefficient`.
      * 
      * @param learning_rate learning rate, for determining speed of convergence. Must be positive. Default 0.01
      * @param momentum_coefficient for determining amount of momentum to use. Cannot be negative. Default 0
@@ -238,12 +238,6 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //GETTERS
 
-    /**
-     * (DEPRECATED METHOD) Throws a `std::runtime_error`.
-     */
-    int batch_size() const {
-        throw std::runtime_error("DEPRECATED");
-    }
 
     /**
      * @return vector of 2 hyperparameters: learning rate (index 0), momentum coefficient (index 1)
@@ -287,14 +281,6 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////////////
     //SETTERS
-
-
-    /**
-     * (DEPRECATED METHOD) Throws a `std::runtime_error`.
-     */
-    void set_batch_size(int new_batch_size) {
-        throw std::runtime_error("DEPRECATED");
-    }
 
 
     /**
@@ -380,7 +366,7 @@ private:
         output.dB.resize(layers.size());
         output.dW.resize(layers.size());
 
-        Eigen::VectorXd delta;
+        Eigen::VectorXd delta = Eigen::VectorXd(1);
         auto final_activation = layers.back().activation_function();
         bool final_activation_using_softmax = final_activation->name() == "softmax";
         bool using_cross_entropy_loss = loss_calculator->name() == "cross_entropy";
@@ -413,7 +399,6 @@ private:
         }
 
 
-
         //Compute for the other layers
         for(int l = static_cast<int>(layers.size()) - 1; l >= 0; l--) {
 
@@ -422,16 +407,18 @@ private:
                 ? intermediate_outputs[l-1].post_activation
                 : initial_input;
 
-
             // Weight gradient = delta * previous activation transposed
+            
             output.dW[l] = delta * previous_post_activation.transpose();
+            // ^ EigenLite v1: this line returns a VectorXd when it should return a MatrixXd. Something with static dimensions or the transpose.
+                
             // Bias gradient = delta
             output.dB[l] = delta;
 
             //propagate delta
             if (l > 0) {
                 // Backpropagate delta to previous layer
-                delta = intermediate_outputs[l].weights.transpose().eval() * delta;
+                delta = intermediate_outputs[l].weights.transpose() * delta;
 
                 // Apply hidden layer activation derivative
                 const auto& previous_activation = layers[l-1].activation_function();
@@ -439,7 +426,7 @@ private:
                 const Eigen::VectorXd& previous_layer_output = previous_activation->using_pre_activation()
                     ? intermediate_outputs[l-1].pre_activation
                     : intermediate_outputs[l-1].post_activation;
-
+                
                 delta = delta.cwiseProduct(previous_activation->compute_derivative(previous_layer_output));
             }
         }
@@ -486,6 +473,7 @@ private:
             }
         }
 
+
         //update the layers
         for(size_t l = 0; l < grads.dW.size(); l++) {
 
@@ -524,9 +512,11 @@ private:
 
         using namespace std;
         using namespace Eigen;
-
-        const int OLD_N_THREADS = Eigen::nbThreads();
-        Eigen::setNbThreads(1);
+        
+        #ifndef USING_EIGENLITE
+            const int OLD_N_THREADS = Eigen::nbThreads();
+            Eigen::setNbThreads(1);
+        #endif
 
         vector<Gradients> gradients(predictions.size()); //Gradients across the minibatch. Size = batch size
 
@@ -609,8 +599,10 @@ private:
             layers[l].set_weight_matrix(layers[l].weight_matrix() + velocity_weights[l]);
             layers[l].set_bias_vector(layers[l].bias_vector() + velocity_biases[l]);
         }
-
-        Eigen::setNbThreads(OLD_N_THREADS);
+        
+        #ifndef USING_EIGENLITE
+            Eigen::setNbThreads(OLD_N_THREADS);
+        #endif
     }
 };
 

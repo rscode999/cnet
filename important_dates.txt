@@ -7,3 +7,4 @@
 2025-09-18: Finished optimizer hyperparameter adjustments. Ready for v1.0 release, which was pushed back 4 days
 2025-09-26: Finished batch training
 2026-01-24: Finished multithreaded batch training
+2026-03-15: After 3 attempts, a minimized version of Eigen, "Eigen Lite", can be substituted for the full Eigen release

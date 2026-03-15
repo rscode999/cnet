@@ -647,6 +647,7 @@ public:
             initial_inputs.resize(1);
             initial_inputs[0] = input;
 
+            intermediate_outputs.clear();
             intermediate_outputs.resize(1);
             intermediate_outputs[0] = {};
         }
@@ -716,9 +717,11 @@ public:
             intermediate_outputs.clear();
             intermediate_outputs.resize(inputs.size());
         }
-
-        const int N_OLD_EIGEN_THREADS = Eigen::nbThreads();
-        Eigen::setNbThreads(1);
+        
+        #ifndef USING_EIGENLITE
+            const int N_OLD_EIGEN_THREADS = Eigen::nbThreads();
+            Eigen::setNbThreads(1);
+        #endif
 
         std::vector<std::thread> threads(n_threads);
         std::atomic<size_t> next_thread_index{0};
@@ -761,8 +764,11 @@ public:
         for (auto& th : threads) {
             th.join();
         }
-
-        Eigen::setNbThreads(N_OLD_EIGEN_THREADS);
+        
+        #ifndef USING_EIGENLITE
+            Eigen::setNbThreads(N_OLD_EIGEN_THREADS);
+        #endif
+        
         return outputs;
     }
 

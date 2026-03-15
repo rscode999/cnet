@@ -1,0 +1,3 @@
+//Designed to imitate Eigen's import functionality
+#pragma once
+#include "matrix.cpp"

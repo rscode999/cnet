@@ -6,9 +6,7 @@
 
 #pragma once
 
-
 namespace CNet {
-
 
 
 
@@ -16,7 +14,9 @@ namespace CNet {
 /**
  * Removes all leading and trailing whitespace from `s`
  * 
- * Helper to `store_network_config`
+ * Helper to `store_network_config`.
+ * 
+ * Mutates `s`.
  * 
  * @param s string to remove whitespace from
  */
@@ -31,8 +31,6 @@ void strip(std::string& s) {
         return !std::isspace(ch);
     }).base(), s.end());
 }
-
-
 
 
 
@@ -58,6 +56,42 @@ std::vector<std::string> split_by_spaces(const std::string& input) {
             output.push_back(item);
         }
 
+    }
+
+    return output;
+}
+
+
+
+/**
+ * Returns `input`, but with all non-numerical characters in each index removed.
+ * 
+ * Numerical characters include digits, negative signs, and decimal points.
+ * 
+ * Helper to `load_network_config`
+ * 
+ * @param input vector of strings to process
+ * @return `input`, where each index has only numerical characters and spaces.
+ */
+std::vector<std::string> remove_non_numbers(const std::vector<std::string>& input) {
+    using namespace std;
+
+    vector<string> output;
+
+    for(const string& input_str : input) {
+        string current_output_str = "";
+
+        for (auto i = 0; i < input_str.length(); i++) {
+
+            //Digit 0-9, decimal point, negative sign, or space: add to output
+            if(((int)input_str[i] >= 48 && (int)input_str[i] <= 57) || input_str[i] == '.' || input_str[i] == '-' || input_str[i] == ' ') {
+                current_output_str.push_back(input_str[i]);
+            }
+        }
+        
+        if(current_output_str.length() > 0) {
+            output.push_back(current_output_str);
+        }
     }
 
     return output;
@@ -128,8 +162,9 @@ CNet::Network load_network_config(const std::string& config_filepath) {
         }
         
         //Split line by spaces
-        if (!current_line.empty() && current_line.back() == '\r')
+        if (!current_line.empty() && current_line.back() == '\r') {
             current_line.pop_back();
+        }
         vector<string> split_line = split_by_spaces(current_line);
 
 
@@ -212,6 +247,11 @@ CNet::Network load_network_config(const std::string& config_filepath) {
         else if(stage == 2) {
             assert(input_dim > 0);
             assert(output_dim > 0);
+            // for(const std::string& s : split_line) {
+            //     std::cout << s << std::endl;
+            // }
+            split_line = remove_non_numbers(split_line);
+            
 
             assert((int)split_line.size() == input_dim && "All matrices in the save file must have their specified number of rows");
             
@@ -243,6 +283,7 @@ CNet::Network load_network_config(const std::string& config_filepath) {
         else if(stage == 3) {
             // cout << layer_name << " " << input_dim << " " << output_dim << endl;
             // cout << weight_matrix;
+            split_line = remove_non_numbers(split_line);
 
             assert((int)split_line.size() == 1);
             
@@ -330,8 +371,14 @@ void store_network_config(const std::string& config_filepath, const CNet::Networ
         Layer current_layer = network.layer_at(i);
         
         output_file << current_layer.name() << " " << current_layer.activation_function()->name() << " " << current_layer.input_dimension() << " " << current_layer.output_dimension() << "\n";
-        output_file << current_layer.weight_matrix() << "\n\n";
-        output_file << current_layer.bias_vector() << "\n\n";
+        output_file << current_layer.weight_matrix() << "\n";
+        #ifndef USING_EIGENLITE
+            output_file << "\n";
+        #endif
+        output_file << current_layer.bias_vector() << "\n";
+        #ifndef USING_EIGENLITE
+            output_file << "\n";
+        #endif
 
         //for assertions
         string current_layer_name = current_layer.name();
