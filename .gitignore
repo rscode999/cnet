@@ -1,6 +1,7 @@
 .gitignore
 .vscode
-a.exe
+*.exe
 eigen3_4_0/
 test.txt
 *.exe
+old/

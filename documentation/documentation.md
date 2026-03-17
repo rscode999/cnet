@@ -17,7 +17,7 @@ To use in your program, include the "cnet/core.cpp" file. Example: `#include "cn
 All classes and methods are in the `CNet` namespace. The only class or method not in `CNet` is the `illegal_state` exception, which is not in a namespace.
 
 Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).  
-All Eigen functionality needed for CNet is supported in Eigen Lite, included with this repo. Import Eigen Lite in the same way Eigen would be imported.
+All Eigen functionality needed for CNet is supported in Eigen Lite, included with this repo. Import Eigen Lite using `#include <Eigen/Core>` or `#include <Eigen/Dense>`, as with standard Eigen.
 
 <details>
   <summary>IMPORTANT NOTE for development using Eigen + Eigen Lite</summary>

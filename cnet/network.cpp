@@ -281,13 +281,16 @@ public:
      * 
      * The layer does not have an activation function.
      * 
-     * @param input_dimension dimension of the layer's input
-     * @param output_dimension dimension of the layer's output
+     * @param input_dimension dimension of the layer's input. Must be positive
+     * @param output_dimension dimension of the layer's output. Must be positive
      * @param name name of the layer. Default: `"layer"`
      * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      * @throws `illegal_state` if the network is enabled
      */
     void add_layer(int input_dimension, int output_dimension, std::string name="layer", int initialization_scale_factor = 1) {
+        assert(input_dimension > 0 && "Layer addition- Input dimension must be positive");
+        assert(output_dimension > 0 && "Layer addition- Output dimension must be positive");
+
         if(enabled) {
             throw illegal_state("Network must not be enabled to add a layer");
         }
@@ -305,14 +308,17 @@ public:
      * The weights and biases of the layer are initialized to random numbers 
      * on the interval [-`initialization_scale_factor`, `initialization_scale_factor`].
      * 
-     * @param input_dimension dimension of the layer's input
-     * @param output_dimension dimension of the layer's output
+     * @param input_dimension dimension of the layer's input. Must be positive.
+     * @param output_dimension dimension of the layer's output. Must be positive.
      * @param activation_function smart pointer to activation function of the new layer
      * @param name name of the layer. Default: `"layer"`
      * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      * @throws `illegal_state` if the network is enabled
      */
     void add_layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name="layer", int initialization_scale_factor = 1) {
+        assert(input_dimension > 0 && "Layer addition- Input dimension must be positive");
+        assert(output_dimension > 0 && "Layer addition- Output dimension must be positive");
+        
         if(enabled) {
             throw illegal_state("Network must not be enabled to add a layer");
         }

@@ -256,13 +256,11 @@ VectorXd one_hot_vectorxd(int n_indices, int input) {
  * Creates and trains a model to convert an input, in binary, to a one-hot output.
  * 
  * Uses ReLU and softmax activations, along with cross-entropy loss.
- * 
- * Note: When using Eigen Lite, loss after 200 epochs becomes ~0. Loss may not converge for N_INPUTS greater than 5.
  */
 void test_training_binconvert() {
     const int N_INPUTS = 6; //Arbitary positive constant
     const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
-    const int N_EPOCHS = 1000; //Positive constant
+    const int N_EPOCHS = 1600; //Positive constant
 
     Network net = Network();
 

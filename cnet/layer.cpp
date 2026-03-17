@@ -80,8 +80,8 @@ public:
      * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      */
     Layer(int input_dimension, int output_dimension, std::string name = "layer", int initialization_scale_factor = 1) {
-        assert((input_dimension>0 && "Input vector's dimension must be positive"));
-        assert((output_dimension>0 && "Output vector's dimension must be positive"));
+        assert((input_dimension>0 && "Layer creation- Input vector's dimension must be positive"));
+        assert((output_dimension>0 && "Layer creation- Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
         #ifdef USING_EIGENLITE
@@ -121,8 +121,8 @@ public:
         std::string name = "layer",
         int initialization_scale_factor = 1) {
 
-        assert((input_dimension>0 && "Input vector's dimension must be positive"));
-        assert((output_dimension>0 && "Output vector's dimension must be positive"));
+        assert((input_dimension>0 && "Layer creation- Input vector's dimension must be positive"));
+        assert((output_dimension>0 && "Layer creation- Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
         #ifdef USING_EIGENLITE

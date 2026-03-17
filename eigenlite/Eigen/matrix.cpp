@@ -422,7 +422,7 @@ public:
         // Random number generator
         static std::random_device rd;
         static std::mt19937 gen(rd());
-        std::uniform_real_distribution<T> dist(T(-1 * range), T(range));
+        std::uniform_real_distribution<T> dist(T(-1 * abs(range)), T(abs(range)));
 
         for (int32_t r = 0; r < n_rows; ++r) {
             for (int32_t c = 0; c < n_cols; ++c) {
