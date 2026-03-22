@@ -1,7 +1,8 @@
 # CNet
 **C++ framework for writing neural networks**
 
-**The Eigen 3 package is no longer required. You may use a minimized version of Eigen 3, called Eigen Lite, that comes with this repo. Note that not all Eigen operations, especially `array` and `dot`, are not supported in Eigen Lite.**
+**As of version 1.4, the Eigen package is no longer required. You may use a minimized version of Eigen, called Eigen Lite, that comes with this repo. Note that not all Eigen operations, especially `array` and `dot`, are not supported in Eigen Lite.**  
+[Change Log](documentation/CHANGES.md)
 
 By using, viewing, or contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
 Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
@@ -26,23 +27,28 @@ Using **the power of C++**, I created a neural network framework with these desi
 
 
 ## Setup Instructions
-This project is based on the Eigen 3 linear algebra package. A minimized (but less optimized) version of Eigen 3, called Eigen Lite, is provided with the repo.
+This project is based on the Eigen linear algebra package. Functionality is tested for Eigen 3.4.0 and 5.0.0. A minimized (but less optimized) version of Eigen, called Eigen Lite, is provided with the repo.
 
-After pulling this repo, you may want to download Eigen 3:
-[zip](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip), [tar.gz](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz),
-[Eigen website](https://eigen.tuxfamily.org/index.php?title=Main_Page).
+After pulling this repo, you may want to download Eigen:
+[zip](https://gitlab.com/libeigen/eigen/-/archive/5.0.0/eigen-5.0.0.zip), [tar.gz](https://gitlab.com/libeigen/eigen/-/archive/5.0.0/eigen-5.0.0.tar.gz),
+[Eigen website](https://libeigen.gitlab.io/eigen/docs-5.0/GettingStarted.html).
 Then, extract the archive and place the *entire* folder (without removing the contents) inside your cloned repo's top-level directory.
 
-Directory structure should be as follows:
+Directory structure should be as follows (.gitlab, .bench, blas, etc. come with the Eigen distribution):
 ```
-your-repo-name
+your-repo-name/
 ├── cnet/
-├── <EIGEN FOLDER GOES HERE>/
+├── documentation/
 ├── eigenlite/
+├── EIGEN FOLDER GOES HERE/
+│   ├── .gitlab/
+│   ├── .bench/
+│   ├── blas/
+│   ├── ci/
+│   ├── cmake/
+│   └── ...
 ├── main.cpp
-├── tests.cpp
-├── README.md
-...
+└── ...
 ```
 
 If you have GnuMake installed, change the `EIGEN_DIRECTORY_PATH` variable in the [Makefile](Makefile) to the name of your Eigen folder. If you wish to use Eigen Lite, change `EIGEN_DIRECTORY_PATH` to 'eigenlite'.  
@@ -63,7 +69,7 @@ using namespace CNet;
 
 ## Quick Start Guide
 
-Ensure you have the line `#include "cnet/core.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in this repo's top-level directory.
+Ensure you have the line `#include "cnet/core.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in this repo's top-level directory. You may want to use the provided [main](main.cpp) file.
 
 To create a network, use the CNet namespace,* then create a new Network object:
 ```
@@ -274,3 +280,15 @@ Other than "cnet", the top-level directory contains:
 - The project Makefile
 - The README
 - Miscellaneous files
+
+
+## Testing Instructions
+
+Go to the main function at the bottom of the [test file](tests.cpp). Uncomment any tests you wish to run.
+
+Compile the tests using this command, if using G++:
+```
+g++ tests.cpp  -o tests  -std=c++14  -I {name of Eigen 3 folder} -O2 -Wall -Werror -Wpedantic
+```
+
+Or, change the `MAIN` variable in the [Makefile](Makefile) to `tests.cpp` and compile with `make c`.

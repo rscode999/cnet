@@ -79,14 +79,14 @@ public:
      * @param name identifier for this Layer. Default: `"layer"`
      * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      */
-    Layer(int input_dimension, int output_dimension, std::string name = "layer", int initialization_scale_factor = 1) {
+    Layer(int32_t input_dimension, int32_t output_dimension, std::string name = "layer", double initialization_scale_factor = 1) {
         assert((input_dimension>0 && "Layer creation- Input vector's dimension must be positive"));
         assert((output_dimension>0 && "Layer creation- Output vector's dimension must be positive"));
 
         //Initialize weights and biases to random values on [-1, 1]
         #ifdef USING_EIGENLITE
-            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension, initialization_scale_factor, Eigen::MatrixTag{});
-            biases  = Eigen::VectorXd::Random(output_dimension, initialization_scale_factor, Eigen::VectorTag{});
+            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension, initialization_scale_factor);
+            biases  = Eigen::VectorXd::Random(output_dimension, Eigen::VectorTag{}, initialization_scale_factor);
         #else
             weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
             biases  = Eigen::VectorXd::Random(output_dimension, initialization_scale_factor);
@@ -116,10 +116,10 @@ public:
      * @param name identifier for this Layer. Default: `"layer"`
      * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      */
-    Layer(int input_dimension, int output_dimension,
+    Layer(int32_t input_dimension, int32_t output_dimension,
         std::shared_ptr<ActivationFunction> activation_function,
         std::string name = "layer",
-        int initialization_scale_factor = 1) {
+        double initialization_scale_factor = 1) {
 
         assert((input_dimension>0 && "Layer creation- Input vector's dimension must be positive"));
         assert((output_dimension>0 && "Layer creation- Output vector's dimension must be positive"));
@@ -127,8 +127,8 @@ public:
         //Initialize weights and biases to random values on [-1, 1]
         #ifdef USING_EIGENLITE
             //Eigen Lite version: Directly use the initialzation scale factor in the Random matrix creation
-            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension, initialization_scale_factor, Eigen::MatrixTag{});
-            biases  = Eigen::VectorXd::Random(output_dimension, initialization_scale_factor, Eigen::VectorTag{});
+            weights = Eigen::MatrixXd::Random(output_dimension, input_dimension, initialization_scale_factor);
+            biases  = Eigen::VectorXd::Random(output_dimension, Eigen::VectorTag{}, initialization_scale_factor);
         #else
             //Standard Eigen: Random matrix + separate addition of initialization scale factor
             weights = Eigen::MatrixXd::Random(output_dimension, input_dimension);
@@ -168,7 +168,7 @@ public:
     /**
      * @return the number of elements in the layer's input
      */
-    int input_dimension() const {
+    int32_t input_dimension() const {
         return weights.cols();
     }
 
@@ -182,7 +182,7 @@ public:
     /**
      * @return the number of elements in the layer's output
      */
-    int output_dimension() const {
+    int32_t output_dimension() const {
         return weights.rows();
     }
 

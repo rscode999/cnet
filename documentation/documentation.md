@@ -1,7 +1,7 @@
 
 # Class and Method Documentation
 
-Documentation for each class and its methods.
+Documentation for each CNet class and its methods.
 
 <details>
   <summary>Implementation Details</summary>
@@ -16,8 +16,10 @@ To use in your program, include the "cnet/core.cpp" file. Example: `#include "cn
 
 All classes and methods are in the `CNet` namespace. The only class or method not in `CNet` is the `illegal_state` exception, which is not in a namespace.
 
-Some functions use the `Eigen` linear algebra package. A short guide for Eigen can be found [here](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html).  
+Some functions use the `Eigen` linear algebra package.  
 All Eigen functionality needed for CNet is supported in Eigen Lite, included with this repo. Import Eigen Lite using `#include <Eigen/Core>` or `#include <Eigen/Dense>`, as with standard Eigen.
+
+[Eigen documentation (external link)](https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html) / [Eigen Lite documentation](../eigenlite/documentation.md)
 
 <details>
   <summary>IMPORTANT NOTE for development using Eigen + Eigen Lite</summary>
@@ -140,7 +142,7 @@ The created network is not enabled. It has no layers, loss calculator, or optimi
 
 #### biases\_at
 
-*Signature*: `Eigen::VectorXd biases_at(int layer_number) const`
+*Signature*: `Eigen::VectorXd biases_at(int32_t layer_number) const`
 
 Returns a deep copy of the bias vector in layer `layer_number`.
 
@@ -150,20 +152,20 @@ Returns a deep copy of the bias vector in layer `layer_number`.
 
 **Parameters**
 
-* `layer_number` (`int`): Layer number to access.  Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `layer_number` (`int32_t`): Layer number to access.  Must be on the interval [0, `{networkName}.layer_count()`-1].
 
 
 ---
 
 #### input\_dimension
 
-*Signature*: `int input_dimension() const`
+*Signature*: `int32_t input_dimension() const`
 
 Returns the number of inputs of this network.
 
 **Returns**
 
-* `int`: Number of inputs.
+* `int32_t`: Number of inputs.
 
 **Exceptions**
 
@@ -187,7 +189,7 @@ The network must be enabled to train and evaluate with it.
 
 #### layer\_at (by index)
 
-*Signature*: `Layer layer_at(int layer_number) const`
+*Signature*: `Layer layer_at(int32_t layer_number) const`
 
 Returns a deep copy of the layer at `layer_number`.
 
@@ -197,7 +199,7 @@ Returns a deep copy of the layer at `layer_number`.
 
 **Parameters**
 
-* `layer_number` (`int`): Layer number (0-based indexing). Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `layer_number` (`int32_t`): Layer number (0-based indexing). Must be on the interval [0, `{networkName}.layer_count()`-1].
 
 ---
 
@@ -225,13 +227,13 @@ The first matching layer name, i.e. the layer with the lowest index number, is r
 
 #### layer\_count
 
-*Signature*: `int layer_count() const`
+*Signature*: `int32_t layer_count() const`
 
 Returns the number of layers in the network.
 
 **Returns**
 
-* `int`: Number of layers.
+* `int32_t`: Number of layers.
 
 ---
 
@@ -277,13 +279,13 @@ Example: If the Network uses a SGD optimizer, the output has 2 indices. Index 0 
 
 #### output\_dimension
 
-*Signature*: `int output_dimension() const`
+*Signature*: `int32_t output_dimension() const`
 
 Returns the number of outputs of this network.
 
 **Returns**
 
-* `int`: Number of outputs.
+* `int32_t`: Number of outputs.
 
 **Exceptions**
 
@@ -293,7 +295,7 @@ Returns the number of outputs of this network.
 
 #### weights\_at
 
-*Signature*: `Eigen::MatrixXd weights_at(int layer_number) const`
+*Signature*: `Eigen::MatrixXd weights_at(int32_t layer_number) const`
 
 Returns a deep copy of the weight matrix in layer `layer_number`.
 
@@ -303,7 +305,7 @@ Returns a deep copy of the weight matrix in layer `layer_number`.
 
 **Parameters**
 
-* `layer_number` (`int`): Index of layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `layer_number` (`int32_t`): Index of layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
 
 ---
 
@@ -338,7 +340,7 @@ To use this method, the network must be disabled.
 
 #### add\_layer (dimensions)
 
-*Signature*: `void add_layer(int input_dimension, int output_dimension, std::string name = "layer", int initialization_scale_factor = 1)`
+*Signature*: `void add_layer(int32_t input_dimension, int32_t output_dimension, std::string name = "layer", double initialization_scale_factor = 1)`
 
 Adds a new layer with the given dimensions and name. The new layer has no activation function.
 
@@ -359,10 +361,10 @@ The new layer's activation function is the identity function, f(x)=x, a placehol
 
 **Parameters**
 
-* `input_dimension` (`int`): Number of input nodes. Must be positive.
-* `output_dimension` (`int`): Number of output nodes. Must be positive.
+* `input_dimension` (`int32_t`): Number of input nodes. Must be positive.
+* `output_dimension` (`int32_t`): Number of output nodes. Must be positive.
 * `name` (`std::string`): Layer name. Default: `"layer"`
-* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
+* `initialization_scale_factor` (`double`): Factor to multiply weights and biases by. Default 1.
 
 **Exceptions**
 
@@ -372,7 +374,7 @@ The new layer's activation function is the identity function, f(x)=x, a placehol
 
 #### add\_layer (dimensions + activation)
 
-*Signature*: `void add_layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer", int initialization_scale_factor = 1)`
+*Signature*: `void add_layer(int32_t input_dimension, int32_t output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer", double initialization_scale_factor = 1)`
 
 Adds a new layer with the specified dimensions, activation function, and name.
 
@@ -383,15 +385,25 @@ To use this method, the network must be disabled.
 
 **Parameters**
 
-* `input_dimension` (`int`): Number of input nodes. Must be positive.
-* `output_dimension` (`int`): Number of output nodes. Must be positive.
+* `input_dimension` (`int32_t`): Number of input nodes. Must be positive.
+* `output_dimension` (`int32_t`): Number of output nodes. Must be positive.
 * `activation_function` (`std::shared_ptr<ActivationFunction>`): Pointer to activation function.
 * `name` (`std::string`): Layer name. Default: `"layer"`
-* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
+* `initialization_scale_factor` (`double`): Factor to multiply weights and biases by. Default 1.
 
 **Exceptions**
 
 * `illegal_state`: If the network is enabled.
+
+---
+
+#### clear_training_state
+
+*Signature:* `void clear_training_state()`
+
+Removes all training state information and excess space.
+
+Denies the ability to use the `reverse` method until `forward` is called.
 
 ---
 
@@ -430,7 +442,7 @@ If all conditions are met, the network resets all internal state previously used
 
 #### insert\_layer\_at
 
-*Signature*: `void insert_layer_at(int new_pos, Layer new_layer)`
+*Signature*: `void insert_layer_at(int32_t new_pos, Layer new_layer)`
 
 Inserts `new_layer` at position `new_pos`.
 
@@ -440,7 +452,7 @@ To use this method, the network must be disabled.
 
 **Parameters**
 
-* `new_pos` (`int`): Insertion index. Must be on the interval [0, `{networkName}.layer_count()`] (inclusive on both sides).
+* `new_pos` (`int32_t`): Insertion index. Must be on the interval [0, `{networkName}.layer_count()`] (inclusive on both sides).
 * `new_layer` (`Layer`): Layer to insert.
 
 **Exceptions**
@@ -473,7 +485,7 @@ To use this method, the network must be disabled.
 
 #### remove\_layer\_at
 
-*Signature*: `void remove_layer_at(int remove_pos)`
+*Signature*: `void remove_layer_at(int32_t remove_pos)`
 
 Removes the layer at position `remove_pos`.
 
@@ -481,7 +493,7 @@ To use this method, the network must be disabled.
 
 **Parameters**
 
-* `remove_pos` (`int`): Index of the layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `remove_pos` (`int32_t`): Index of the layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
 
 **Exceptions**
 
@@ -491,7 +503,7 @@ To use this method, the network must be disabled.
 
 #### rename\_layer\_at
 
-*Signature*: `void rename_layer_at(int rename_pos, std::string new_name)`
+*Signature*: `void rename_layer_at(int32_t rename_pos, std::string new_name)`
 
 Renames the layer at `rename_pos`.
 
@@ -499,14 +511,14 @@ Unlike most setters, this method can be called when the network is enabled.
 
 **Parameters**
 
-* `rename_pos` (`int`): Layer index to rename. Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `rename_pos` (`int32_t`): Layer index to rename. Must be on the interval [0, `{networkName}.layer_count()`-1].
 * `new_name` (`std::string`): New name for the chosen layer
 
 ---
 
 #### set\_activation\_function\_at
 
-*Signature*: `void set_activation_function_at(int layer_number, std::shared_ptr<ActivationFunction> new_activation_function)`
+*Signature*: `void set_activation_function_at(int32_t layer_number, std::shared_ptr<ActivationFunction> new_activation_function)`
 
 Sets the activation function for a given layer.
 
@@ -516,7 +528,7 @@ The network must be disabled to use this method.
 
 **Parameters**
 
-* `layer_number` (`int`): Index of the layer to change. Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `layer_number` (`int32_t`): Index of the layer to change. Must be on the interval [0, `{networkName}.layer_count()`-1].
 * `new_activation_function` (`std::shared_ptr<ActivationFunction>`): Smart pointer to the activation function object.
 
 **Exceptions**
@@ -527,7 +539,7 @@ The network must be disabled to use this method.
 
 #### set\_biases\_at
 
-*Signature*: `void set_biases_at(int layer_number, Eigen::VectorXd new_biases)`
+*Signature*: `void set_biases_at(int32_t layer_number, Eigen::VectorXd new_biases)`
 
 Sets the biases of the specified layer.
 
@@ -535,7 +547,7 @@ To use this method, the network must be disabled.
 
 **Parameters**
 
-* `layer_number` (`int`): Index of the layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `layer_number` (`int32_t`): Index of the layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
 * `new_biases` (`Eigen::VectorXd`): New bias vector. Must be a column vector with `{selected layer}.output_dimension()` elements (dimension depends on the selected layer)
 
 **Exceptions**
@@ -605,7 +617,7 @@ For more information about particular optimizers, including their preconditions,
 
 #### set\_weights\_at
 
-*Signature*: `void set_weights_at(int layer_number, Eigen::MatrixXd new_weights)`
+*Signature*: `void set_weights_at(int32_t layer_number, Eigen::MatrixXd new_weights)`
 
 Sets the weight matrix of the specified layer.
 
@@ -613,7 +625,7 @@ To use this method, the network must be disabled.
 
 **Parameters**
 
-* `layer_number` (`int`): Layer index. Must be on the interval [0, `{networkName}.layer_count()`-1].
+* `layer_number` (`int32_t`): Layer index. Must be on the interval [0, `{networkName}.layer_count()`-1].
 * `new_weights` (`Eigen::MatrixXd`): New weight matrix. Must have `{selected layer}.output_dimension()` rows and `{selected layer}.input_dimension()` columns.
 
 **Exceptions**
@@ -650,7 +662,7 @@ Otherwise, the network does not store intermediate outputs, saving memory and co
 
 #### forward (multiple inputs)
 
-*Signature*: `std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd>& inputs, int n_threads = 1, bool training = true)`
+*Signature*: `std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd>& inputs, int32_t n_threads = 1, bool training = true)`
 
 Returns the outputs of the network for each input vector given in `inputs`.
 
@@ -661,7 +673,7 @@ If `training` is true, intermediate outputs are stored for backpropagation, allo
 All data from previous calls to `forward` is erased.     
 Otherwise, the network does not store intermediate outputs, saving memory and computation time.
 
-*Ensure you double-check the order of `threads` and `training`. Confusing the order will cause silent errors.*
+*Ensure you double-check the order of `threads` and `training`. Because booleans are treated as integers, confusing the order will cause silent errors.*
 
 **Returns**
 
@@ -670,7 +682,7 @@ Otherwise, the network does not store intermediate outputs, saving memory and co
 **Parameters**
 
 * `input` (`const std::vector<Eigen::VectorXd>&`): List of input vectors to the network. Cannot be empty, and each element must be of size `{networkName}.input_dimension()`.
-* `n_threads` (`int`): Number of threads to use. Must be on the interval [1, `inputs.size()`]. Default 1.
+* `n_threads` (`int32_t`): Number of threads to use. Must be on the interval [1, `inputs.size()`]. Default 1.
 * `training` (`bool`): Whether the network stores data for backpropagation. Default: `true`.
 
 **Exceptions**
@@ -730,7 +742,7 @@ If these conditions are not met, the method throws `illegal_state`.
 
 #### reverse (multiple outputs, in a minibatch)
 
-*Signature*: `void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int n_threads = 1)`
+*Signature*: `void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int32_t n_threads = 1)`
 
 Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer, in a minibatch of size `predictions.size()`.
 
@@ -747,7 +759,7 @@ If these conditions are not met, the method throws `illegal_state`.
 
 * `predictions` (`const std::vector<Eigen::VectorXd>&`): Predicted outputs from the network. Cannot be empty, and each element must have `{networkName}.output_dimension()` elements.
 * `actuals` (`const std::vector<Eigen::VectorXd>&`): Expected outputs that the network should have produced. Must have the same size as `predictions`, and each element must have `{networkName}.output_dimension()` elements
-* `n_threads` (`int`): Number of threads to use. Must be on the interval [1, `predictions.size()`]. Default 1.
+* `n_threads` (`int32_t`): Number of threads to use. Must be on the interval [1, `predictions.size()`]. Default 1.
 
 **Exceptions**
 
@@ -786,11 +798,13 @@ net += new_layer;
 
 #### output stream insertion (`<<`)
 
-*Signature*: `friend std::ostream& operator<<(std::ostream& output_stream, const Network& network)`
+*Signature*: `std::ostream& operator<<(std::ostream& output_stream, const Network& network)`
 
 Exports `network` to the output stream `output_stream`, returning a reference to `output_stream` with `network` added.
 
 The exported network, as a `std::string`, contains the Network's enabled/disabled status, loss calculator, optimizer, and layers.
+
+For export to output stream of type `std::ostream` only. Not for export to `std::wcout`.
 
 Usage Example
 ```
@@ -950,7 +964,7 @@ Internally, all layers have activation functions. If an activation is not assign
 
 #### Without activation function
 
-*Signature:* `Layer(int input_dimension, int output_dimension, std::string name = "layer", int initialization_scale_factor = 1)`
+*Signature:* `Layer(int32_t input_dimension, int32_t output_dimension, std::string name = "layer", double initialization_scale_factor = 1)`
 
 Creates a new Layer, without an activation function, and initializes all fields.
 
@@ -966,16 +980,16 @@ The activation function is set to the identity activation function, f(x)=x, whic
 
 **Parameters**
 
-* `input_dimension` (`int`): Number of inputs that the Layer takes in. Must be positive.
-* `output_dimension` (`int`): Number of outputs that the Layer gives. Must be positive.
+* `input_dimension` (`int32_t`): Number of inputs that the Layer takes in. Must be positive.
+* `output_dimension` (`int32_t`): Number of outputs that the Layer gives. Must be positive.
 * `name` (`std::string`): Identifier for this Layer. Default: `"layer"`
-* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
+* `initialization_scale_factor` (`double`): Factor to multiply weights and biases by. Default 1.
 
 ---
 
 #### With activation function
 
-*Signature:* `Layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer", int initialization_scale_factor = 1)`
+*Signature:* `Layer(int32_t input_dimension, int32_t output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name = "layer", double initialization_scale_factor = 1)`
 
 Creates a new Layer and loads it with the provided fields.
 
@@ -983,11 +997,11 @@ All weights and biases of the Layer are randomly initialized on the uniform inte
 
 **Parameters**
 
-* `input_dimension` (`int`): Number of inputs that the Layer takes in. Must be positive.
-* `output_dimension` (`int`): Number of outputs that the Layer gives. Must be positive.
+* `input_dimension` (`int32_t`): Number of inputs that the Layer takes in. Must be positive.
+* `output_dimension` (`int32_t`): Number of outputs that the Layer gives. Must be positive.
 * `activation_function` (`std::shared_ptr<ActivationFunction>`): Smart pointer to activation function object to use.
 * `name` (`std::string`): Identifier for this Layer. Default: `"layer"`
-* `initialization_scale_factor` (`int`): Factor to multiply weights and biases by. Default 1.
+* `initialization_scale_factor` (`double`): Factor to multiply weights and biases by. Default 1.
 
 ---
 
@@ -1019,13 +1033,13 @@ Returns the layer's bias vector, as a `Eigen::VectorXd`.
 
 #### input\_dimension
 
-*Signature:* `int input_dimension() const`
+*Signature:* `int32_t input_dimension() const`
 
 Returns the number of inputs for the layer.
 
 **Returns**
 
-* `int`: Number of input elements.
+* `int32_t`: Number of input elements.
 
 ---
 
@@ -1051,13 +1065,13 @@ std::cout << my_layer.name(); //Prints "layer name"
 
 #### output\_dimension
 
-*Signature:* `int output_dimension() const`
+*Signature:* `int32_t output_dimension() const`
 
 Returns the number of outputs for the layer.
 
 **Returns**
 
-* `int`: Number of output elements.
+* `int32_t`: Number of output elements.
 
 ---
 
@@ -1187,11 +1201,13 @@ All data for training (i.e. intermediate layer outputs) is stored in a `Network`
 
 #### output stream insertion (`<<`)
 
-*Signature:* `friend std::ostream& operator<<(std::ostream& output_stream, const Layer& layer)`
+*Signature:* `std::ostream& operator<<(std::ostream& output_stream, const Layer& layer)`
 
 Exports `layer` to the output stream `output_stream`, returning a new output stream with `layer` inside.
 
 Information contained in the new output stream is the layer's name, its input and output dimensions in the format "(`input dimension`, `output dimension`)", and its activation function.
+
+For export to output streams of type `std::ostream` only. Not for export to `std::wcout`.
 
 Usage Example
 ```

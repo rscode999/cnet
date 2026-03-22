@@ -47,7 +47,7 @@ void test_constructor_initializer() {
     //Random
     MatrixXd m9 = MatrixXd::Random(2, 2);
     cout << m9 << endl; //2x2 initialized to random numbers on [-1, 1]
-    VectorXd m10 = VectorXd::Random(3, 1000, VectorTag{});
+    VectorXd m10 = VectorXd::Random(3, VectorTag{}, 1000);
     cout << m10 << endl; //3D vector initialized to random numbers on [-1000, 1000]
 }
 
@@ -359,5 +359,5 @@ int main() {
     // test_transpose();
     // test_unary_expr();
     // test_conversions();
-    test_extras();
+    // test_extras();
 }

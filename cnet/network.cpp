@@ -121,8 +121,8 @@ public:
      * @return biases of layer `layer_number`
      * @throws `std::out_of_range` if `layer_number` is not on the interval [0, `{network}.layer_count()` - 1]
      */
-    Eigen::VectorXd biases_at(int layer_number) const {
-        assert((layer_number>=0 && layer_number<(int)layers.size() && "Layer number for bias vector access must be on the interval [0, # layers - 1]"));
+    Eigen::VectorXd biases_at(int32_t layer_number) const {
+        assert((layer_number>=0 && layer_number<(int32_t)layers.size() && "Layer number for bias vector access must be on the interval [0, # layers - 1]"));
         return layers[layer_number].bias_vector();
     }
 
@@ -132,8 +132,8 @@ public:
      * @return the number of inputs of this network
      * @throws `illegal_state` if the network has no layers
      */
-    int input_dimension() const {
-        if((int)layers.size()<1) {
+    int32_t input_dimension() const {
+        if((int32_t)layers.size()<1) {
             throw illegal_state("The network must have at least 1 layer to get input dimension");
         }
         return layers[0].input_dimension();
@@ -153,7 +153,7 @@ public:
     /**
      * @return deep copy of the layer at `layer_number` (0-based indexing). Must be between 0 and `{network}.layer_count()`-1
      */
-    Layer layer_at(int layer_number) const {
+    Layer layer_at(int32_t layer_number) const {
         assert((layer_number>=0 && layer_number<layer_count() && "To retrieve a layer, layer number must be between 0 and (number of layers)-1, inclusive on both ends"));
         return layers[layer_number];
     }
@@ -178,7 +178,7 @@ public:
             }
         }
 
-        throw std::out_of_range("Could not find any matching layers with the given name");
+        throw std::out_of_range("Layer at, by layer name: Could not find any matching layers with the given name");
     }
 
 
@@ -186,8 +186,8 @@ public:
     /**
      * @return the number of layers in the network
      */
-    int layer_count() const {
-        return (int)layers.size();
+    int32_t layer_count() const {
+        return (int32_t)layers.size();
     }
 
 
@@ -224,11 +224,11 @@ public:
      * @return the number of outputs of this network
      * @throws `illegal_state` if the network has less than 1 layer
      */
-    int output_dimension() const {
-        if((int)layers.size()<1) {
-            throw illegal_state("The network must have at least 1 layer");
+    int32_t output_dimension() const {
+        if((int32_t)layers.size()<1) {
+            throw illegal_state("Output dimension: The network must have at least 1 layer");
         }
-        return layers[(int)layers.size() - 1].output_dimension();
+        return layers[(int32_t)layers.size() - 1].output_dimension();
     }
 
 
@@ -242,8 +242,8 @@ public:
      * @return weights of layer `layer_number`
      * @throws `std::out_of_range` if `layer_number` is not a valid index number
      */
-    Eigen::MatrixXd weights_at(int layer_number) const {
-        assert((layer_number>=0 && layer_number<(int)layers.size() && "Layer number must be between 0 and (number of layers)-1"));
+    Eigen::MatrixXd weights_at(int32_t layer_number) const {
+        assert((layer_number >= 0 && layer_number < (int32_t)layers.size() && "Weights at: Layer number must be between 0 and (number of layers)-1"));
         return layers[layer_number].weight_matrix();
     }
 
@@ -287,7 +287,7 @@ public:
      * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      * @throws `illegal_state` if the network is enabled
      */
-    void add_layer(int input_dimension, int output_dimension, std::string name="layer", int initialization_scale_factor = 1) {
+    void add_layer(int32_t input_dimension, int32_t output_dimension, std::string name="layer", double initialization_scale_factor = 1) {
         assert(input_dimension > 0 && "Layer addition- Input dimension must be positive");
         assert(output_dimension > 0 && "Layer addition- Output dimension must be positive");
 
@@ -315,7 +315,7 @@ public:
      * @param initialization_scale_factor factor to multiply weights and biases by. Default 1.
      * @throws `illegal_state` if the network is enabled
      */
-    void add_layer(int input_dimension, int output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name="layer", int initialization_scale_factor = 1) {
+    void add_layer(int32_t input_dimension, int32_t output_dimension, std::shared_ptr<ActivationFunction> activation_function, std::string name="layer", double initialization_scale_factor = 1) {
         assert(input_dimension > 0 && "Layer addition- Input dimension must be positive");
         assert(output_dimension > 0 && "Layer addition- Output dimension must be positive");
         
@@ -324,6 +324,19 @@ public:
         }
         Layer new_layer = Layer(input_dimension, output_dimension, activation_function, name, initialization_scale_factor);
         layers.push_back(new_layer);
+    }
+
+
+
+    /**
+     * Removes all training state information and any excess space.
+     */
+    void clear_training_state() {
+        intermediate_outputs.clear();
+        initial_inputs.clear();
+        optim->clear_state();
+
+        layers.shrink_to_fit();
     }
 
 
@@ -355,7 +368,7 @@ public:
     void enable() {
 
         //Ensure there are at least 1 layer
-        if((int)layers.size() < 1) {
+        if((int32_t)layers.size() < 1) {
             throw illegal_state("Enable check failed- The network needs at least 1 layer to begin training");
         }
 
@@ -370,7 +383,7 @@ public:
         }
 
         //Check inputs and outputs of each layer. Also check layers for Softmax activation
-        for(int i = 0; i < (int)layers.size() - 1; i++) {
+        for(int32_t i = 0; i < (int32_t)layers.size() - 1; i++) {
             //Dimension compatibility
             if(layers[i].output_dimension() != layers[i+1].input_dimension()) {
                 throw illegal_state("Enable check failed- Output dimension of layer " + std::to_string(i) + " (dimension=" + std::to_string(layers[i].output_dimension()) +
@@ -384,11 +397,7 @@ public:
         }
 
         //Check passed: prepare for training
-        intermediate_outputs.clear();
-        initial_inputs.clear();
-        optim->clear_state();
-
-        layers.shrink_to_fit();
+        clear_training_state();
 
         enabled = true;
     }
@@ -409,7 +418,7 @@ public:
      * @param new_layer layer to insert at position `new_pos`
      * @throws `illegal_state` if this method is called while enabled
      */
-    void insert_layer_at(int new_pos, Layer new_layer) {
+    void insert_layer_at(int32_t new_pos, Layer new_layer) {
         assert((new_pos >= 0 && new_pos <= layer_count() && "New layer insertion position must be between 0 and (number of layers)"));
         if(enabled) {
             throw illegal_state("Cannot insert a new layer while enabled");
@@ -437,13 +446,13 @@ public:
             throw illegal_state("Cannot remove layers by name while the network is enabled");
         }
 
-        for(unsigned int i=0; i<layers.size(); i++) {
+        for(int32_t i = 0; i < (int32_t)layers.size(); i++) {
             if(layers[i].name() == removal_name) {
                 layers.erase(layers.begin() + i);
                 return;
             }
         }
-        throw std::out_of_range("No matches found");
+        throw std::out_of_range("Remove layer: No matching layer names found");
     }
 
 
@@ -454,7 +463,7 @@ public:
      * @param remove_pos layer number to remove. Must be between 0 and `{network}.layer_count()`-1
      * @throws `illegal_state` if this method is called while the network is enabled
      */
-    void remove_layer_at(int remove_pos) {
+    void remove_layer_at(int32_t remove_pos) {
         assert((remove_pos>=0 && remove_pos<layer_count() && "Remove position must be between 0 and (number of layers)-1"));
 
         if(enabled) {
@@ -473,7 +482,7 @@ public:
      * @param rename_pos layer number to rename (0-based indexing). Must be between 0 and `{network}.layer_count()`-1
      * @param new_name what to remane the layer at `rename_pos` to
      */
-    void rename_layer_at(int rename_pos, std::string new_name) {
+    void rename_layer_at(int32_t rename_pos, std::string new_name) {
         assert((rename_pos>=0 && rename_pos<layer_count() && "Rename position must be between 0 and (number of layers)-1"));
         layers[rename_pos].set_name(new_name);
     }
@@ -492,8 +501,8 @@ public:
      * @param new_activation_function smart pointer to activation function to use 
      * @throws `illegal_state` if the network is enabled
      */
-    void set_activation_function_at(int layer_number, std::shared_ptr<ActivationFunction> new_activation_function) {
-        assert((layer_number>=0 && layer_number<(int)layers.size() && "To change activation functions, layer number must be between 0 and (number of layers)-1"));
+    void set_activation_function_at(int32_t layer_number, std::shared_ptr<ActivationFunction> new_activation_function) {
+        assert((layer_number >= 0 && layer_number < (int32_t)layers.size() && "To change activation functions, layer number must be between 0 and (number of layers)-1"));
 
         if(enabled) {
             throw illegal_state("Cannot change activation functions while the network is enabled");
@@ -513,8 +522,8 @@ public:
      * @param new_biases new bias vector to set. Must have {selected layer}.output_dimension() rows
      * @throws `illegal_state` if the network is enabled
      */
-    void set_biases_at(int layer_number, Eigen::VectorXd new_biases) {
-        assert((layer_number>=0 && layer_number<(int)layers.size() && "When changing bias vectors, layer number must be between 0 and (network's number of layers)-1"));
+    void set_biases_at(int32_t layer_number, Eigen::VectorXd new_biases) {
+        assert((layer_number>=0 && layer_number<(int32_t)layers.size() && "When changing bias vectors, layer number must be between 0 and (network's number of layers)-1"));
         assert((new_biases.rows() == layers[layer_number].output_dimension() && "New bias vector's number of rows must equal the selected layer's output dimension"));
         assert((new_biases.cols() == 1 && "New biases must be a column vector"));
 
@@ -603,8 +612,8 @@ public:
      * Number of rows must equal {selected layer}.output_dimension(), number of columns must equal {selected layer}.input_dimension()
      * @throws `illegal_state` if the network is enabled
      */
-    void set_weights_at(int layer_number, Eigen::MatrixXd new_weights) {
-        assert((layer_number>=0 && layer_number<(int)layers.size() && "When setting weight matrix, layer number must be between 0 and (network's number of layers)-1"));
+    void set_weights_at(int32_t layer_number, Eigen::MatrixXd new_weights) {
+        assert((layer_number >= 0 && layer_number < (int32_t)layers.size() && "When setting weight matrix, layer number must be between 0 and (network's number of layers)-1"));
         assert((new_weights.rows() == layers[layer_number].output_dimension() && "New weight matrix's row count must equal the layer's output dimension"));
         assert((new_weights.cols() == layers[layer_number].input_dimension() && "New weight matrix's column count must equal the layer's input dimension"));
     
@@ -660,7 +669,7 @@ public:
 
         //Pass input through all layers' forward operations
         Eigen::VectorXd current_layer_output = input;
-        for(int i = 0; i < (int)layers.size(); i++) {
+        for(int32_t i = 0; i < (int32_t)layers.size(); i++) {
 
             //Compute forward pass
             Eigen::VectorXd pre_activation = layers[i].forward(current_layer_output);
@@ -696,7 +705,7 @@ public:
      * @return the network's output, as a std::vector<Eigen::VectorXd>, whose elements are of dimension `{networkName}.output_dimension()`
      * @throws `illegal_state` if the network is not enabled
      */
-    std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd> inputs, int n_threads = 1, bool training = true) {
+    std::vector<Eigen::VectorXd> forward(const std::vector<Eigen::VectorXd> inputs, int32_t n_threads = 1, bool training = true) {
         using namespace std;
         using namespace Eigen;
 
@@ -715,7 +724,7 @@ public:
             //set initial inputs for the examples
 
             initial_inputs.resize(inputs.size());
-            for(int i = 0; i < inputs.size(); i++) {
+            for(int32_t i = 0; i < inputs.size(); i++) {
                 assert(inputs[i].size() == input_dimension() && "All initial inputs in the multiple-input forward pass must have `input_dimension()` elements");
                 initial_inputs[i] = inputs[i];
             }
@@ -725,14 +734,14 @@ public:
         }
         
         #ifndef USING_EIGENLITE
-            const int N_OLD_EIGEN_THREADS = Eigen::nbThreads();
+            const int32_t N_OLD_EIGEN_THREADS = Eigen::nbThreads();
             Eigen::setNbThreads(1);
         #endif
 
         std::vector<std::thread> threads(n_threads);
         std::atomic<size_t> next_thread_index{0};
 
-        for (int t = 0; t < n_threads; ++t) {
+        for (int32_t t = 0; t < n_threads; ++t) {
             threads[t] = std::thread([&] {
 
                 //loop through all inputs, deep-copying `next_thread_index` to each thread
@@ -805,7 +814,7 @@ public:
     /**
      * Updates the weights and biases of this network using `predictions` and `actuals`, using the network's optimizer.
      * 
-     * This method requires the network to be enabled. Also, `{networkName}.forward` with `training`=true must have been called since the network was enabled.
+     * This method requires the network to be enabled. Also, `{networkName}.forward` with `training`=true (on a single vector) must have been called since the network was enabled.
      * If these conditions are not met, the method throws `illegal_state`.
      * 
      * @param predictions what the network predicts for a given input
@@ -846,7 +855,7 @@ public:
      * @param n_threads number of threads to use. Must be on the interval [1, `predictions.size()`]. Default 1.
      * @throws `illegal_state` if the network is not enabled, or a feed-forward training operation on many inputs was not done
      */
-    void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int n_threads = 1) {
+    void reverse(const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, int32_t n_threads = 1) {
         using namespace Eigen;
 
         assert(predictions.size() > 0 && "Predictions list for reverse batch training cannot be empty");
@@ -947,10 +956,10 @@ std::ostream& operator<<(std::ostream& output_stream, const Network& network) {
     if(network.optim) {
         output_stream << network.optim->name() << " optimizer (";
 
-        for(int h = 0; h < (int)network.optim->hyperparameters().size(); h++) {
+        for(int32_t h = 0; h < (int32_t)network.optim->hyperparameters().size(); h++) {
             output_stream << network.optim->hyperparameters() [h];
             
-            output_stream << ((h < (int)network.optim->hyperparameters().size() - 1) ? ", " : ")");
+            output_stream << ((h < (int32_t)network.optim->hyperparameters().size() - 1) ? ", " : ")");
         }
         
     }

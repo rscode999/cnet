@@ -137,17 +137,17 @@ CNet::Network load_network_config(const std::string& config_filepath) {
         Stage 3: Bias vector + create layer and load into output network
     */
 
-    int stage = 0; //0=number of layers, 1=header, 2=weight matrix, 3=bias vector
+    int32_t stage = 0; //0=number of layers, 1=header, 2=weight matrix, 3=bias vector
 
-    int n_layers = 0; //Should not be changed after reading the first line
-    int current_layer = 0;
+    int32_t n_layers = 0; //Should not be changed after reading the first line
+    int32_t current_layer = 0;
 
     string layer_name; //custom name for the layer
     string layer_activation_function_name; //identifier for activation function (not the function itself)
 
-    int input_dim = 0; //layer-wise
-    int current_row = 0; //current row of matrix or vector
-    int output_dim = 0; //layer-wise
+    int32_t input_dim = 0; //layer-wise
+    int32_t current_row = 0; //current row of matrix or vector
+    int32_t output_dim = 0; //layer-wise
 
     MatrixXd weight_matrix;
     VectorXd bias_vector;
@@ -228,9 +228,9 @@ CNet::Network load_network_config(const std::string& config_filepath) {
             assert (current_line.size() >= 4 && "Header line in loaded save file must have at least 4 space-separated entries");
 
             //make layer name
-            for (int i = 0; i < (int)split_line.size() - 3; i++) {
+            for (int32_t i = 0; i < (int32_t)split_line.size() - 3; i++) {
                 layer_name += split_line[i];
-                if(i < (int)split_line.size() - 4) {
+                if(i < (int32_t)split_line.size() - 4) {
                     layer_name.push_back(' ');
                 }
             }
@@ -253,7 +253,7 @@ CNet::Network load_network_config(const std::string& config_filepath) {
             split_line = remove_non_numbers(split_line);
             
 
-            assert((int)split_line.size() == input_dim && "All matrices in the save file must have their specified number of rows");
+            assert((int32_t)split_line.size() == input_dim && "All matrices in the save file must have their specified number of rows");
             
             //ignore blank lines
             if(split_line.size() == 0) {
@@ -262,7 +262,7 @@ CNet::Network load_network_config(const std::string& config_filepath) {
             
             //load current row of matrix
             try {
-                for(int c = 0; c < input_dim; c++) {
+                for(int32_t c = 0; c < input_dim; c++) {
                     weight_matrix(current_row, c) = stod(split_line[c]);
                 }
             }
@@ -285,7 +285,7 @@ CNet::Network load_network_config(const std::string& config_filepath) {
             // cout << weight_matrix;
             split_line = remove_non_numbers(split_line);
 
-            assert((int)split_line.size() == 1);
+            assert((int32_t)split_line.size() == 1);
             
             try {
                 bias_vector(current_row) = stod(split_line[0]);
@@ -367,7 +367,7 @@ void store_network_config(const std::string& config_filepath, const CNet::Networ
     }
     output_file << "\n\n";
 
-    for (int i = 0; i < network.layer_count(); i++) {
+    for (int32_t i = 0; i < network.layer_count(); i++) {
         Layer current_layer = network.layer_at(i);
         
         output_file << current_layer.name() << " " << current_layer.activation_function()->name() << " " << current_layer.input_dimension() << " " << current_layer.output_dimension() << "\n";
@@ -383,7 +383,7 @@ void store_network_config(const std::string& config_filepath, const CNet::Networ
         //for assertions
         string current_layer_name = current_layer.name();
         strip(current_layer_name);
-        assert((int)current_layer_name.length() > 0 && "To store a network, all layer names in the network must have at least 1 non-whitespace character");
+        assert((int32_t)current_layer_name.length() > 0 && "To store a network, all layer names in the network must have at least 1 non-whitespace character");
     }
     
     output_file.close();

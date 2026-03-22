@@ -91,16 +91,13 @@ public:
         constexpr double epsilon = 1e-12;
         
         //Clamp predictions to [epsilon, 1.0] then calculate loss
-
         #ifdef USING_EIGENLITE
             
             Eigen::VectorXd clipped_preds = predictions.max(1.0).min(epsilon);
-
-            
             double loss = -actuals.cwiseProduct(clipped_preds.log()).sum();
 
         #else
-        //Standard Eigen version requires calls to `array`
+            //Standard Eigen version requires calls to `array`
             Eigen::VectorXd clipped_preds = predictions.array().max(epsilon).min(1.0);
 
             // Cross-entropy loss: -sum(actual * log(predictions))

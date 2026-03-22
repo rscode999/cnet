@@ -109,7 +109,7 @@ private:
      * @param loss_calculator smart pointer to loss calculator object
      */ 
     virtual void step_minibatch(std::vector<Layer>& layers, const std::vector<Eigen::VectorXd>& initial_input, const std::vector<std::vector<LayerCache>>& intermediate_outputs,
-        const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, const std::shared_ptr<LossCalculator> loss_calculator, int n_threads) = 0;
+        const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, const std::shared_ptr<LossCalculator> loss_calculator, int32_t n_threads) = 0;
 
 public:
     /**
@@ -400,7 +400,7 @@ private:
 
 
         //Compute for the other layers
-        for(int l = static_cast<int>(layers.size()) - 1; l >= 0; l--) {
+        for(int32_t l = static_cast<int32_t>(layers.size()) - 1; l >= 0; l--) {
 
             //Get original post-activation of the previous layer
             Eigen::VectorXd previous_post_activation = (l > 0) 
@@ -508,13 +508,13 @@ private:
      * @param loss_calculator smart pointer to loss calculator object
      */
     void step_minibatch(std::vector<Layer>& layers, const std::vector<Eigen::VectorXd>& initial_inputs, const std::vector<std::vector<LayerCache>>& intermediate_outputs,
-        const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, const std::shared_ptr<LossCalculator> loss_calculator, int n_threads) override {
+        const std::vector<Eigen::VectorXd>& predictions, const std::vector<Eigen::VectorXd>& actuals, const std::shared_ptr<LossCalculator> loss_calculator, int32_t n_threads) override {
 
         using namespace std;
         using namespace Eigen;
         
         #ifndef USING_EIGENLITE
-            const int OLD_N_THREADS = Eigen::nbThreads();
+            const int32_t OLD_N_THREADS = Eigen::nbThreads();
             Eigen::setNbThreads(1);
         #endif
 
@@ -523,11 +523,11 @@ private:
         //Train the minibatch until all samples have been trained
         vector<thread> threads(n_threads);
 
-        std::atomic<int> next_idx{0};
+        std::atomic<int32_t> next_idx{0};
 
-        for (int t = 0; t < n_threads; ++t) {
+        for (int32_t t = 0; t < n_threads; ++t) {
             threads[t] = std::thread([&] {
-                int idx;
+                int32_t idx;
                 while ((idx = next_idx.fetch_add(1)) < predictions.size()) {
                     gradients[idx] = compute_gradients(
                         cref(layers),

@@ -428,13 +428,13 @@ Effective 2025-09-27, code must compile under the following settings:
 
 If, under these settings, the code does not compile, the offending changes must be rejected.
 
-Effective in versions above 1.3, all code must compile using standard Eigen 3 *and* with the provided Eigen Lite package.  
+Effective in versions above 1.3, all code must compile using standard Eigen *and* with the provided Eigen Lite package.  
 To use functionality that is not shared between the two packages, use conditional compilation with `USING_EIGENLITE`, a macro defined in Eigen Lite:
 ```
 #ifdef USING_EIGENLITE
     Functionality supported by Eigen Lite only...
 #else
-    Functionality supported by Eigen only...
+    Functionality supported by standard Eigen only...
 #endif
 ```
 

@@ -25,8 +25,8 @@ namespace Eigen {
  * Defines the static type (i.e. matrix, column-vector) of a Matrix object
  */
 enum MatrixStaticType {
-    MATRIX,
-    COLUMN_VECTOR
+    MATRIX, //Static type matrix
+    COLUMN_VECTOR //Static type column vector
 };
 
 
@@ -34,11 +34,6 @@ enum MatrixStaticType {
  * Used to distinguish calls to `VectorXd::Random(n_rows, range)` from calls to `MatrixXd::Random(n_rows, n_cols)`.
  */
 struct VectorTag {};
-
-/**
- * Used to distinguish calls to `VectorXd::Random(n_rows, range)` from calls to `MatrixXd::Random(n_rows, n_cols)`.
- */
-struct MatrixTag {};
 
 
 
@@ -50,7 +45,7 @@ struct MatrixTag {};
  * The matrix's contents are always allocated to the heap.
  * 
  * @param T datatype of the Matrix
- * @param static_type `MatrixStaticType`
+ * @param static_type Matrix's static type, of type `MatrixStaticType`
  */
 template<typename T, MatrixStaticType static_type>
 class Matrix {
@@ -229,7 +224,7 @@ public:
 
 
     /**
-     * @return Matrix's static type
+     * @return Matrix's static type (0 if MATRIX, 1 if COLUMN_VECTOR)
      */
     constexpr MatrixStaticType staticType() {
         return static_type;
@@ -243,6 +238,47 @@ public:
         static_assert(static_type == COLUMN_VECTOR, "Size operation is for column vectors only");
         return n_rows;
     }
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //SETTERS
+
+    /**
+     * Sets the value at position (`r`, `c`) to `new_value`.
+     * 
+     * @param r row index to set (0-based). Must satisfy `0 <= r < rows()`.
+     * @param c column index to set (0-based). Must satisfy `0 <= c < cols()`.
+     * @param new_value value to change position (`r`, `c`) to
+     */
+    void set(int32_t r, int32_t c, T new_value) {
+        assert(0 <= r < rows() && "Set operation (matrix): Row index out of range");
+        assert(0 <= c < cols() && "Set operation (matrix): Column index out of range");
+        contents[contents_index_at(r, c)] = new_value;
+    }
+
+    /**
+     * Sets the value at position `r` to `new_value`.
+     * 
+     * For statically typed column vectors only.
+     * 
+     * @param r row number to set
+     * @param new_value value to change position `r` to
+     */
+    void set(int32_t r, T new_value) {
+        static_assert(static_type == COLUMN_VECTOR, "2-argument set operation is for statically typed column vectors only");
+        assert(0 <= r <= rows() && "Set operation (vector): Row index out of range");
+        contents[contents_index_at(r, 0)] = new_value;
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -349,25 +385,6 @@ public:
 
 
     /**
-     * Returns a copy of this matrix with all values less than or equal to `max_value`
-     * 
-     * @param max_value Maximum value allowed
-     * @return matrix with no element greater than `max_value`
-     */
-    Matrix max(const T& max_value) const {
-        Matrix output(n_rows, n_cols);
-
-        for (int32_t r = 0; r < rows(); r++) {
-            for(int32_t c = 0; c < cols(); c++) {
-                output(r, c) = ((*this)(r, c) < max_value) ? (*this)(r, c) : max_value;
-            }
-        }
-        return output;
-    }
-
-
-
-    /**
      * Returns a copy of this matrix with all values greater than or equal to `min_value`
      * 
      * @param min_value Minimum value allowed
@@ -387,22 +404,56 @@ public:
 
 
     /**
-     * Returns the maximum coefficient value.
+     * Returns the minimum value in the matrix.
      *
-     * Iterates over all coefficients and returns the largest value.
-     * The matrix must contain at least one element.
+     * @return The minimum coefficient stored in the matrix.
+     */
+    T minCoeff() const {
+        T min_val = contents[0];
+        for (int i = 1; i < rows() * cols(); i++) {
+            if (contents[i] < min_val) {
+                min_val = contents[i];
+            }
+        }
+        return min_val;
+    }
+
+
+
+    /**
+     * Returns a copy of this matrix with all values less than or equal to `max_value`
+     * 
+     * @param max_value Maximum value allowed
+     * @return matrix with no element greater than `max_value`
+     */
+    Matrix max(const T& max_value) const {
+        Matrix output(n_rows, n_cols);
+
+        for (int32_t r = 0; r < rows(); r++) {
+            for(int32_t c = 0; c < cols(); c++) {
+                output(r, c) = ((*this)(r, c) < max_value) ? (*this)(r, c) : max_value;
+            }
+        }
+        return output;
+    }
+
+
+
+    /**
+     * Returns the maximum value in the matrix.
      *
      * @return The maximum coefficient stored in the matrix.
      */
     T maxCoeff() const {
-        T max = contents[0];
+        T max_val = contents[0];
         for (int i = 1; i < rows() * cols(); i++) {
-            if (contents[i] > max) {
-                max = contents[i];
+            if (contents[i] > max_val) {
+                max_val = contents[i];
             }
         }
-        return max;
+        return max_val;
     }
+
 
 
     /**
@@ -413,7 +464,7 @@ public:
      * @param range Maximum absolute value for each element in the matrix. Default 1.
      * @return matrix randomly initialized
      */
-    static Matrix Random(int32_t n_rows, int32_t n_cols, const T& range = 1, MatrixTag = {}) {
+    static Matrix Random(int32_t n_rows, int32_t n_cols, const T& range = 1) {
         assert(n_rows > 0 && "Random vector creation requires row count to be positive");
         assert(n_cols > 0 && "Random vector creation requires column count to be positive");
         
@@ -439,12 +490,12 @@ public:
      * When using the range argument, this method may be mistaken for the `MatrixXd::Random(n_rows, n_cols, range = 1)` call.
      * If so, call with the VectorTag: `VectorXd v = VectorXd::Random(n_rows, n_cols, VectorTag{})`.
      * 
-     * @param n_rows Number of rows in the vector
-     * @param range Maximum absolute value for each element in the vector. Default 1.
+     * @param n_rows Number of rows in the vector. Must be positive.
      * @param VectorTag Used to force the compiler to select the vector's method instead of the matrix method
+     * @param range Maximum absolute value for each element in the vector. Default 1.
      * @return vector randomly initialized
      */
-    static Matrix<T, COLUMN_VECTOR> Random(int32_t n_rows, const T& range = 1, VectorTag = {}) {
+    static Matrix<T, COLUMN_VECTOR> Random(int32_t n_rows, VectorTag = {}, const T& range = 1) {
         static_assert(static_type == COLUMN_VECTOR, "Random vector creation is for statically typed column-vectors only");
         assert(n_rows > 0 && "Random vector creation requires row count to be positive");
 
@@ -566,8 +617,12 @@ public:
         return result;
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
     /**
      * Returns a reference to the coefficient at position (r, c).
@@ -691,8 +746,8 @@ public:
      *
      * Adds the scalar value to each coefficient independently.
      *
-     * @param scalar The scalar value to add. Default: none.
-     * @return A new matrix where each element equals original + scalar.
+     * @param scalar The scalar value to add.
+     * @return A new matrix where each element equals original + `scalar`.
      */
     Matrix operator+(T scalar) const {
         Matrix result(rows(), cols());
@@ -724,6 +779,19 @@ public:
 
 
     /**
+     * Adds `scalar` to each element of this matrix.
+     *
+     * @param scalar Scalar value to add
+     */
+    void operator+=(const T& scalar) {
+        for (int i = 0; i < rows()*cols(); ++i) {
+            contents[i] += scalar; 
+        }
+    }
+
+
+
+    /**
      * Adds `other` to this matrix.
      * @param other Matrix to add to this matrix. Must match this matrix's row and column counts.
      */
@@ -747,7 +815,7 @@ public:
      * @param scalar The scalar value to subtract
      * @return A new matrix where each element is subtracted by `scalar`.
      */
-    Matrix operator-(T scalar) const {
+    Matrix operator-(const T& scalar) const {
         Matrix result(rows(), cols());
         for (int i = 0; i < rows()*cols(); ++i) {
             result.contents[i] = contents[i] - scalar;
@@ -772,6 +840,19 @@ public:
             result.contents[i] = contents[i] - other.contents[i];
         }
         return result;
+    }
+
+
+
+    /**
+     * Subtracts `scalar` from each element of this matrix.
+     *
+     * @param scalar Scalar value to subtract
+     */
+    void operator-=(T scalar) {
+        for (int i = 0; i < rows()*cols(); ++i) {
+            contents[i] -= scalar; 
+        }
     }
 
 
@@ -814,10 +895,20 @@ public:
 
 
     /**
-     * Returns the result of dividing this matrix by a scalar.
+     * Multiplies `scalar` by each element of this matrix in-place.
      *
-     * Divides each coefficient independently by the scalar value.
-     * The scalar must not be zero.
+     * @param scalar Scalar value to multiply
+     */
+    void operator*=(const T& scalar) {
+        for (int i = 0; i < rows()*cols(); ++i) {
+            contents[i] *= scalar; 
+        }
+    }
+
+
+
+    /**
+     * Returns the result of dividing this matrix by a scalar.
      *
      * @param scalar The scalar divisor. Cannot be zero.
      * @return A new matrix where each element equals original / scalar.
@@ -849,7 +940,7 @@ public:
 
 
     /**
-     * Loads this matrix with the specified comma-separated elements.
+     * Loads this matrix with the specified comma-separated elements in row-major order.
      * 
      * The amount of elements loaded must equal `rows()`*`cols()`.
      */
@@ -882,6 +973,31 @@ public:
     }
 };
 
+
+
+
+/**
+ * Returns a matrix with `scalar` added to each element of `matrix`.
+ * 
+ * `scalar` appears on the left side of the expression.
+ * 
+ * @param scalar number to add
+ * @param matrix matrix to add to
+ * @return `scalar` + `matrix`
+ */
+template<typename T, MatrixStaticType static_type>
+Matrix<T, static_type> operator+(const T& scalar, const Matrix<T, static_type>& matrix)
+{
+    Matrix<T, static_type> result(matrix.rows(), matrix.cols());
+
+    for (int32_t r = 0; r < matrix.rows(); ++r) {
+        for (int32_t c = 0; c < matrix.cols(); ++c) {
+            result(r, c) = scalar + matrix(r, c);
+        }
+    }
+
+    return result;
+}
 
 
 
@@ -1006,6 +1122,11 @@ std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>&
 }
 
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 /**

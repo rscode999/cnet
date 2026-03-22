@@ -157,11 +157,9 @@ Constructs a new SGD optimizer using the given hyperparameters.
 
 ### Getters
 
-#### batch\_size
+#### batch\_size (REMOVED)
 
-DEPRECATED! Batch training is implemented as a multithreaded operation.
-
-Calling this method causes a `std::runtime_error`.
+DEPRECATED as of version 1.3! No longer exists.
 
 ---
 
@@ -229,11 +227,9 @@ The information includes the optimizer's name (`"sgd"`), learning rate, and mome
 
 ### Setters
 
-#### set\_batch\_size
+#### set\_batch\_size (REMOVED)
 
-DEPRECATED! Batch training is implemented as a multithreaded operation.
-
-Calling this method causes a `std::runtime_error`.
+DEPRECATED as of version 1.3! No longer exists.
 
 ---
 
