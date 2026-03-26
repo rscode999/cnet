@@ -49,6 +49,7 @@ The Optimizer is an abstract class. A user cannot directly instantiate an Optimi
 All Optimizers share the virtual methods below. They can be called on any Optimizer instance.
 
 ---
+---
 
 #### hyperparameters
 
@@ -128,6 +129,7 @@ If not overridden, this method returns "optimizer".
 
 ---
 ---
+---
 
 
 ## SGD
@@ -137,6 +139,7 @@ The SGD optimizer has an adjustable learning rate and momentum coefficient.
 
 When training in batches, SGD optimizers take the average of losses and momentums across the batch.
 
+---
 ---
 
 ### Constructor
@@ -152,6 +155,7 @@ Constructs a new SGD optimizer using the given hyperparameters.
 * `learning_rate` (`double`): Learning rate, which determines the step size and speed of optimization. Must be positive. Default: 0.01
 * `momentum_coefficient` (`double`): Momentum coefficient to accelerate convergence or dampen oscillations. Cannot be negative. Default: 0
 
+---
 ---
 
 
@@ -223,6 +227,7 @@ The information includes the optimizer's name (`"sgd"`), learning rate, and mome
 
 * `std::string`: String containing detailed information about the optimizer.
 
+---
 ---
 
 ### Setters

@@ -4,6 +4,14 @@
 
 Documentation for the minimal version of Eigen used in this package.
 
+<details>
+  <summary>Details</summary>
+  
+This file is located in `eigenlite/documentation.md`.
+
+</details>
+<br>
+
 Eigen Lite implements only the functionality needed for CNet.
 
 All Eigen Lite functionality is under the `Eigen` namespace, identical to that of the full Eigen distribution.  
@@ -54,6 +62,29 @@ Matrix<double, MATRIX> m(2, 2);
 m << 1, 2, 3, 4;
 ```
 
+A Matrix's elements are accessed using the parentheses operator. Elements have 0-based indexes.  
+Example:
+```
+Given a Matrix `m`, initialized to
+[[1  2]
+ [3  4]]
+
+std::cout << m(0, 0); //prints 1
+std::cout << m(1, 1); //prints 4
+```
+
+Matrices of static type COLUMN_VECTOR can be accessed using a single-argument parentheses operator, with 0-based indices.  
+Example:
+```
+Given a Matrix<T, COLUMN_VECTOR> `v`, initialized to
+[[1  ]
+ [10 ]
+ [100]]
+
+std::cout << v(0); //prints 1
+std::cout << v(2); //prints 100
+```
+
 The Matrix class has 2 typedefs: `MatrixXd` for `Matrix<double, MATRIX>`, and `VectorXd` for `Matrix<double, COLUMN_VECTOR>`.
 
 <br>
@@ -75,6 +106,16 @@ m2 << 1, 2, 3, 4, 5, 6;
 VectorXd v(3); //equivalently: Matrix<double, COLUMN_VECTOR>(3);
 v << 1, 2, 3;
 
+
+//Get elements from matrix m1
+std::cout << m1(0, 0) << std::endl; //1
+std::cout << m1(1, 2) << std::endl; //6
+
+//Get elements from the vector v
+std::cout << v(0) << std::endl; //1
+std::cout << v(2) << std::endl; //3
+
+
 //Calculate matrix-vector product
 std::cout << (m1 * v) << std::endl; //[[14], [32]]
 
@@ -85,6 +126,7 @@ std::cout << (m1 * m2) << std::endl; //[[22, 28], [49, 64]]
 std::cout << (m1 * 3) << std::endl; //[[3, 6, 9], [12, 15, 18]]
 ```
 
+---
 ---
 
 ### Constructors
@@ -104,6 +146,8 @@ Initializes the matrix with no contents and sets the number of rows and columns 
 *Signature:* `Matrix(int32_t n_rows, int32_t n_cols)`
 
 Creates a matrix with `n_rows` rows and `n_cols` columns. The contents are uninitialized.
+
+For matrices only. Works for statically-typed vectors only if `n_cols` is 1.
 
 **Parameters**
 
@@ -125,8 +169,49 @@ For statically typed column vectors only.
 * `n_rows` (`int32_t`): Number of rows in the new vector. Must be positive.
 
 ---
+---
 
 ### Getters
+
+#### at (Matrix)
+
+*Signature:* `const T& at(int32_t row_index, int32_t col_index) const`
+
+Returns a constant reference to the matrix element at position `(row_index, col_index)`.
+
+Value indexing is 0-based. The top left value is at position (0, 0).
+
+**Returns**
+
+* `const T&`: Constant reference to the matrix element at position `(row_index, col_index)`.
+
+**Parameters**
+
+* `row_index` (`int32_t`): The row index. Must satisfy `0 <= row_index < rows()`.
+* `col_index` (`int32_t`): The column index. Must satisfy `0 <= col_index < cols()`.
+
+---
+
+
+#### at (Column Vector)
+
+*Signature:* `const T& at(int32_t row_index) const`
+
+Returns a constant reference to the element at position `row_index`.
+
+Value indexing is 0-based. The top value is at position 0.
+
+For statically-typed column vectors only.
+
+**Returns**
+
+* `const T&`: Constant reference to the matrix element at position `row_index` in a column vector.
+
+**Parameters**
+
+* `row_index` (`int32_t`): The row index. Must satisfy `0 <= row_index < rows()`.
+
+---
 
 #### cols
 
@@ -179,29 +264,31 @@ Static types are: 0 (`MATRIX`) for general matrix, 1 (`COLUMN_VECTOR`) for colum
 * `MatrixStaticType`: 0 for matrix, 1 for column vector.
 
 ---
+---
 
 ### Setters
 
 #### set (Matrix)
 
-*Signature:* `void set(int32_t r, int32_t c, T new_value)`
+*Signature:* `void set(int32_t row_index, int32_t col_index, T new_value)`
 
-Sets the value at position (`r`, `c`) to `new_value`.
+Sets the value at position (`row_index`, `col_index`) to `new_value`.
 
 Uses 0-based indexing. The element in the first row and the first column is at position (0, 0).
 
 **Parameters**
 
-* `r` (`int32_t`): Row index to set (0-based). Must satisfy `0 <= r < rows()`.
-* `c` (`int32_t`): Column index to set (0-based). Must satisfy `0 <= c < cols()`.
-* `new_value` (`T`): Value to change position (`r`, `c`) to.
+* `row_index` (`int32_t`): Row index to set (0-based). Must satisfy `0 <= row_index < rows()`.
+* `col_index` (`int32_t`): Column index to set (0-based). Must satisfy `0 <= col_index < cols()`.
+* `new_value` (`T`): Value to change position (`row_index`, `col_index`) to.
 
+---
 
 #### set (Column Vector)
 
-*Signature:* `void set(int32_t r, T new_value)`
+*Signature:* `void set(int32_t row_index, T new_value)`
 
-Sets the value at position `r` to `new_value`.
+Sets the value at position `row_index` to `new_value`.
 
 Uses 0-based indexing. The first element is at position 0.
 
@@ -209,9 +296,10 @@ For statically-typed column vectors only.
 
 **Parameters**
 
-* `r` (`int32_t`): Row index to set (0-based). Must satisfy `0 <= r < rows()`.
-* `new_value` (`T`): Value to change position (`r`, `c`) to.
+* `row_index` (`int32_t`): Row index to set (0-based). Must satisfy `0 <= row_index < rows()`.
+* `new_value` (`T`): Value to change position `row_index` to.
 
+---
 ---
 
 ### Methods
@@ -488,8 +576,12 @@ Returns a statically-typed column vector with `n_rows` rows, with all elements i
 * `n_rows` (`int32_t`): Number of rows in the column vector. Must be positive.
 
 ---
+---
 
 ### Arithmetic Operator Overloads
+
+Overloads work only if the datatypes of both operands match.  
+Adding matrices of types `int32_t` and `double` will not work.
 
 #### operator+ (Matrix + Scalar)
 
@@ -515,14 +607,16 @@ Returns a new matrix where each element of the matrix is added to `scalar`.
 
 The scalar appears on the left-hand side of the operation.
 
+Works for any matrix static type.
+
 **Returns**
 
-* `Matrix`: A new matrix where each element equals `scalar` + original.
+* `Matrix<T, static_type>`: A new matrix where each element equals `scalar` + original.
 
 **Parameters**
 
 * `scalar` (`T`): Value to add to each matrix element.
-* `matrix` (`Matrix<T, static_type>`): Matrix to add to.
+* `matrix` (`Matrix<T, static_type>`): Matrix to add to (of any static type).
 
 ---
 
@@ -531,6 +625,8 @@ The scalar appears on the left-hand side of the operation.
 *Signature:* `Matrix operator+(const Matrix& other) const`
 
 Returns a new matrix containing the element-wise sum of the current matrix and another matrix.
+
+Works regardless of static type, as long as both matrices' row and column counts match.
 
 **Returns**
 
@@ -591,6 +687,8 @@ Returns a new matrix where each element equals the original matrix element minus
 Returns a new matrix where each element of the matrix is subtracted from `scalar`.
 
 The scalar appears on the left-hand side of the operation.
+
+Works for any matrix static type.
 
 **Returns**
 
@@ -690,6 +788,7 @@ Returns the matrix product of the given matrices.
 
 This operation works regardless of the operands' static type, as long as row and column counts are compatible.
 
+ATTENTION! Unlike standard Eigen, Eigen Lite does not support implicit element-wise multiplication.  
 For element-wise multiplication, use the `cwiseProduct` method: `lhs.cwiseProduct(rhs)`.
 
 **Returns**
@@ -742,84 +841,137 @@ Divides each element of the matrix by `scalar`, modifying the matrix in place.
 * `scalar` (`T`): Scalar value to divide by. Cannot be zero.
 
 ---
+---
 
 ### Other Operator Overloads
 
 #### operator() (Matrix, Mutable)
 
-*Signature:* `T& operator() (int r, int c)`
+*Signature:* `T& operator() (int32_t row_index, int32_t col_index)`
 
-Returns a reference to the matrix element at position `(r, c)`.
+Returns a reference to the matrix element at position `(row_index, col_index)`.
+
+Allows for index access.
 
 Value indexing is 0-based. The top left value is at position (0, 0).
 
+Example
+```
+Given a matrix `m` containing:
+[[ 1  2  3 ]
+ [ 4  5  6 ]]
+
+std::cout << m(0, 0) << std::endl; // prints 1
+std::cout << m(0, 1) << std::endl; // prints 2
+std::cout << m(1, 2) << std::endl; // prints 6
+```
+
 **Returns**
 
-* `T&`: Reference to the matrix element at position `(r, c)`.
+* `T&`: Reference to the matrix element at position `(row_index, col_index)`.
 
 **Parameters**
 
-* `r` (`int`): Row index. Must satisfy `0 <= r < rows()`.
-* `c` (`int`): Column index. Must satisfy `0 <= c < cols()`.
+* `row_index` (`int32_t`): Row index. Must satisfy `0 <= row_index < rows()`.
+* `col_index` (`int32_t`): Column index. Must satisfy `0 <= col_index < cols()`.
 
 ---
 
 #### operator() (Matrix, Const)
 
-*Signature:* `const T& operator() (int r, int c) const`
+*Signature:* `const T& operator() (int32_t row_index, int32_t col_index) const`
 
-Returns a constant reference to the matrix element at position `(r, c)`.
+Returns a constant reference to the matrix element at position `(row_index, col_index)`.
+
+Allows for index access.
 
 Value indexing is 0-based. The top left value is at position (0, 0).
 
+Example
+```
+Given a matrix `m`, which may be const, containing:
+[[ 1  2  3 ]
+ [ 4  5  6 ]]
+
+std::cout << m(0, 0) << std::endl; // prints 1
+std::cout << m(0, 1) << std::endl; // prints 2
+std::cout << m(1, 2) << std::endl; // prints 6
+```
+
 **Returns**
 
-* `const T&`: Constant reference to the matrix element at position `(r, c)`.
+* `const T&`: Constant reference to the matrix element at position `(row_index, col_index)`.
 
 **Parameters**
 
-* `r` (`int`): The row index. Must satisfy `0 <= r < rows()`.
-* `c` (`int`): The column index. Must satisfy `0 <= c < cols()`.
+* `row_index` (`int32_t`): The row index. Must satisfy `0 <= row_index < rows()`.
+* `col_index` (`int32_t`): The column index. Must satisfy `0 <= col_index < cols()`.
 
 ---
 
 #### operator() (Column Vector, Mutable)
 
-*Signature:* `T& operator() (int r)`
+*Signature:* `T& operator() (int32_t row_index)`
 
-Returns a reference to the element at position `r`.
+Returns a reference to the element at position `row_index`.
+
+Allows for index access.
 
 Value indexing is 0-based. The top value is at position 0.
 
 For statically-typed column vectors only.
 
+Example
+```
+Given a statically-typed column vector `v` containing:
+[[ 1 ]
+ [ 2 ]
+ [ 3 ]]
+
+std::cout << v(0) << std::endl; // prints 1
+std::cout << v(2) << std::endl; // prints 3
+```
+
 **Returns**
 
-* `T&`: Reference to the matrix element at position `r` in a column vector.
+* `T&`: Reference to the matrix element at position `row_index` in a column vector.
 
 **Parameters**
 
-* `r` (`int`): The row index. Must satisfy `0 <= r < rows()`.
+* `row_index` (`int32_t`): The row index. Must satisfy `0 <= row_index < rows()`.
 
 ---
 
 #### operator() (Column Vector, Const)
 
-*Signature:* `const T& operator() (int r) const`
+*Signature:* `const T& operator() (int32_t row_index) const`
 
-Returns a constant reference to the element at position `r`.
+Returns a constant reference to the element at position `row_index`.
+
+Allows for index access.
 
 Value indexing is 0-based. The top value is at position 0.
 
 For statically-typed column vectors only.
 
+Example
+```
+Given a statically-typed column vector `v`, which may be const, containing:
+[[ 1 ]
+ [ 2 ]
+ [ 3 ]]
+
+std::cout << v(0) << std::endl; // prints 1
+std::cout << v(2) << std::endl; // prints 3
+```
+
 **Returns**
 
-* `const T&`: Constant reference to the matrix element at position `r` in a column vector.
+* `const T&`: Constant reference to the matrix element at position `row_index` in a column vector.
 
 **Parameters**
 
-* `r` (`int`): The row index. Must satisfy `0 <= r < rows()`.
+* `row_index` (`int32_t`): The row index. Must satisfy `0 <= row_index < rows()`.
 
 ---
 

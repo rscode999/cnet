@@ -1,7 +1,7 @@
 # Changes
 
 ## 1.4.0
-**22 March 2026**
+**26 March 2026**
 
 ### Overall
 
@@ -11,7 +11,7 @@
 
 ### Network
 
-- Added `clear_training_state` method
+- Added `clear_training_state` method, which removes training data without having to enable the network
 
 ### Optimizer
 

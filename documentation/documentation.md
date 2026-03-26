@@ -110,6 +110,7 @@ The class definition for `illegal_state` is inside the file "network.cpp", in th
 
 ---
 ---
+---
 
 ## Network
 
@@ -123,7 +124,7 @@ The input layer is the first layer. The output layer is the last layer.
 To train and optimize a network, the network must be enabled via `{networkName}.enable()`.
 Once enabled, the network cannot be edited until `{networkName}.disable()` is called. Getter methods may still be called while a network is enabled.
 
-
+---
 ---
 
 ### Constructor
@@ -136,6 +137,7 @@ Creates an empty network.
 
 The created network is not enabled. It has no layers, loss calculator, or optimizer.
 
+---
 ---
 
 ### Getters
@@ -307,6 +309,7 @@ Returns a deep copy of the weight matrix in layer `layer_number`.
 
 * `layer_number` (`int32_t`): Index of layer. Must be on the interval [0, `{networkName}.layer_count()`-1].
 
+---
 ---
 
 ### Setters
@@ -633,6 +636,7 @@ To use this method, the network must be disabled.
 * `illegal_state`: If the network is enabled.
 
 ---
+---
 
 ### Methods
 
@@ -766,6 +770,7 @@ If these conditions are not met, the method throws `illegal_state`.
 * `illegal_state`: If the network is disabled, or a training forward pass of `predictions.size()` examples was not previously completed.
 
 ---
+---
 
 ### Operator Overloads
 
@@ -824,7 +829,7 @@ std::cout << net;
 
 ---
 ---
-
+---
 
 ## ActivationFunction
 
@@ -851,6 +856,7 @@ The file "activation_function.cpp" contains the method `make_activation_function
 <br>
 
 ---
+---
 
 ### Constructor
 
@@ -862,6 +868,7 @@ ActivationFunctions are commonly used when pointed to by a smart pointer, partic
 Example:
 ```std::shared_ptr<Relu> relu_activation = std::make_shared<Relu>();```
 
+---
 ---
 
 ### Methods
@@ -943,7 +950,7 @@ If not overridden, this method returns `false`.
 
 
 
-
+---
 ---
 ---
 
@@ -958,6 +965,7 @@ Each layer has a weight matrix and separate bias vector.
 They can be manually viewed or updated using getter and setter methods.  
 Internally, all layers have activation functions. If an activation is not assigned, the layer's activation is the `IdentityActivation`, a placeholder that does nothing.
 
+---
 ---
 
 ### Constructor
@@ -1003,6 +1011,7 @@ All weights and biases of the Layer are randomly initialized on the uniform inte
 * `name` (`std::string`): Identifier for this Layer. Default: `"layer"`
 * `initialization_scale_factor` (`double`): Factor to multiply weights and biases by. Default 1.
 
+---
 ---
 
 ### Getters
@@ -1086,6 +1095,7 @@ Returns the layer's weight matrix.
 * `Eigen::MatrixXd`: Weight matrix, with `{layerName}.output_dimension()` rows and `{layerName}.input_dimension()` columns.
 
 ---
+---
 
 ### Setters
 
@@ -1139,6 +1149,7 @@ Sets the layer's weight matrix.
 
 * `new_weights` (`Eigen::MatrixXd`): New matrix of weights. Must have `{layer}.output_dimension()` rows and `{layer}.input_dimension()` columns.
 
+---
 ---
 
 ### Methods
@@ -1196,6 +1207,7 @@ All data for training (i.e. intermediate layer outputs) is stored in a `Network`
 * `input` (`const Eigen::VectorXd&`): Input column vector. Must have `{layerName}.output_dimension()` elements.
 
 ---
+---
 
 ### Operator Overloads
 
@@ -1226,7 +1238,7 @@ std::cout << layer;
 
 
 
-
+---
 ---
 ---
 
@@ -1252,6 +1264,7 @@ The file "loss_calculator.cpp" contains the method `make_loss_calculator`. If cr
 <br>
 
 ---
+---
 
 ### Constructor
 
@@ -1263,6 +1276,7 @@ All pre-implemented subclasses of `LossCalculator` have a constructor that takes
 
 Example: `MeanSquaredError()`
 
+---
 ---
 
 ### Methods
@@ -1322,7 +1336,7 @@ This method is purely virtual. Subclasses must override this method.
 
 ---
 ---
-
+---
 
 ## Optimizer
 
@@ -1348,6 +1362,7 @@ The file "optimizer.cpp" contains the method `make_optimizer`. If creating a new
 
 ---
 ---
+---
 
 ## Standalone Methods
 
@@ -1355,6 +1370,7 @@ Methods that are *not* part of a class.
 
 Includes functions to load and store network configurations to an external file, and functions to create network components by name.
 
+---
 ---
 
 ### Loading and Storing Networks
@@ -1427,6 +1443,7 @@ The default layer name is "layer", not the empty string.
 
 * `runtime_error`: If the file at `config_filepath` does not exist, or cannot be opened.
 
+---
 ---
 
 ### Creating Network Components by Name

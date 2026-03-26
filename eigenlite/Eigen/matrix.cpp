@@ -129,11 +129,15 @@ public:
 
 
     /**
-     * Creates an uninitialized Matrix with `n_rows` rows and `n_cols` columns
+     * Creates an uninitialized Matrix with `n_rows` rows and `n_cols` columns.
+     * 
+     * For matrices only. Works for statically-typed vectors only if `n_cols` is 1.
+     * 
      * @param n_rows Number of rows to use. Must be positive (and must equal the static row count, if not Dynamic)
      * @param n_cols Number of columns to use. Must be positive (and must equal the static row count, if not Dynamic)
      */
     Matrix(int32_t n_rows, int32_t n_cols) : n_rows(n_rows), n_cols(n_cols) {
+        assert(static_type == MATRIX || n_cols == 1 && "Row+column constructor is for matrices only");
         contents = new T[n_rows * n_cols];
     }
 
@@ -141,7 +145,7 @@ public:
     /**
      * Creates an uninitialized vector (a Matrix with 1 column) with `n_rows` rows.
      * 
-     * For matrices of static type 1 (i.e. column vectors) only.
+     * For matrices of static type COLUMN_VECTOR (i.e. column vectors) only.
      * 
      * @param n_rows Number of rows to use. Must be positive.
      */
@@ -155,9 +159,6 @@ public:
 
     /**
      * Copies `other` into a new matrix object.
-     * 
-     * The number of static rows and columns is retained.
-     * 
      * @param other other matrix to copy
      */
     template<typename Tp, MatrixStaticType other_static_type>
@@ -171,11 +172,9 @@ public:
     }
 
 
+
     /**
      * Copies `other` into a new matrix object with identical static row/column counts.
-     * 
-     * The number of static rows and columns is retained.
-     * 
      * @param other other matrix to copy
      */
     Matrix(const Matrix& other) {
@@ -186,6 +185,7 @@ public:
         contents = new T[other.rows() * other.cols()];
         std::copy(other.contents, other.contents + (other.rows() * other.cols()), contents);
     }
+
 
 
     /**
@@ -204,9 +204,40 @@ public:
 
 
 
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    //GETTERS
 
-    /////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////
+    /**
+     * Returns a constant reference to the element at position (`row_index`, `col_index`).
+     *
+     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
+     * @param col_index Column index. Must satisfy 0 <= `col_index` < cols().
+     * @return Reference to the element at position (`row_index`, `col_index`).
+     */
+    const T& at(int32_t row_index, int32_t col_index) const {
+        assert(0 <= row_index && row_index < rows() && "Access: Row out of bounds");
+        assert(0 <= col_index && col_index < cols() && "Access: Column out of bounds");
+        return contents[contents_index_at(row_index,col_index)];
+    }
+
+    /**
+     * Returns a constant reference to the element at position `row_index`.
+     * 
+     * For column vectors (i.e. static number of rows = 1) only.
+     * 
+     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
+     * @return constant reference to the element at position `row_index`.
+     */
+    const T& at(int32_t row_index) const {
+        static_assert(static_type == COLUMN_VECTOR, "Single-index retrieval operation is for column vectors only");
+        assert(0 <= row_index && row_index < rows() && "Access: Row out of bounds");
+        return contents[contents_index_at(row_index,0)];
+    }
+
+
 
     /**
      * @return number of columns
@@ -248,30 +279,30 @@ public:
     //SETTERS
 
     /**
-     * Sets the value at position (`r`, `c`) to `new_value`.
+     * Sets the value at position (`row_index`, `col_index`) to `new_value`.
      * 
-     * @param r row index to set (0-based). Must satisfy `0 <= r < rows()`.
-     * @param c column index to set (0-based). Must satisfy `0 <= c < cols()`.
-     * @param new_value value to change position (`r`, `c`) to
+     * @param row_index row index to set (0-based). Must satisfy `0 <= row_index < rows()`.
+     * @param col_index column index to set (0-based). Must satisfy `0 <= col_index < cols()`.
+     * @param new_value value to change position (`row_index`, `col_index`) to
      */
-    void set(int32_t r, int32_t c, T new_value) {
-        assert(0 <= r < rows() && "Set operation (matrix): Row index out of range");
-        assert(0 <= c < cols() && "Set operation (matrix): Column index out of range");
-        contents[contents_index_at(r, c)] = new_value;
+    void set(int32_t row_index, int32_t col_index, T new_value) {
+        assert(0 <= row_index < rows() && "Set operation (matrix): Row index out of range");
+        assert(0 <= col_index < cols() && "Set operation (matrix): Column index out of range");
+        contents[contents_index_at(row_index, col_index)] = new_value;
     }
 
     /**
-     * Sets the value at position `r` to `new_value`.
+     * Sets the value at position `row_index` to `new_value`.
      * 
      * For statically typed column vectors only.
      * 
-     * @param r row number to set
-     * @param new_value value to change position `r` to
+     * @param row_index row number to set
+     * @param new_value value to change position `row_index` to
      */
-    void set(int32_t r, T new_value) {
+    void set(int32_t row_index, T new_value) {
         static_assert(static_type == COLUMN_VECTOR, "2-argument set operation is for statically typed column vectors only");
-        assert(0 <= r <= rows() && "Set operation (vector): Row index out of range");
-        contents[contents_index_at(r, 0)] = new_value;
+        assert(0 <= row_index <= rows() && "Set operation (vector): Row index out of range");
+        contents[contents_index_at(row_index, 0)] = new_value;
     }
 
 
@@ -279,11 +310,11 @@ public:
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    //METHODS
 
 
     /**
-     * Returns a (statically defined) matrix containing `n_rows` rows and `n_cols` columns, all initialized to the value `constant_value`.
+     * Returns a (statically typed) matrix containing `n_rows` rows and `n_cols` columns, all initialized to the value `constant_value`.
      * 
      * @param n_rows Number of rows in the new matrix. Must be positive
      * @param n_cols Number of columns in the new matrix. Must be positive
@@ -307,7 +338,7 @@ public:
     /**
      * Returns a (statically typed) vector containing `n_rows`, all initialized to the value `constant_value`.
      * 
-     * For vectors with static row count equaling `Dynamic` only.
+     * For statically-typed column vectors only.
      * 
      * @param n_rows Number of rows in the new vector. Must be positive
      * @param constant_value Value to initialize the vector with
@@ -360,7 +391,7 @@ public:
      */
     Matrix exp() const {
         Matrix result(rows(), cols());
-        for (int i = 0; i < rows() * cols(); ++i)
+        for (int32_t i = 0; i < rows() * cols(); ++i)
             result.contents[i] = std::exp(contents[i]);
         return result;
     }
@@ -410,7 +441,7 @@ public:
      */
     T minCoeff() const {
         T min_val = contents[0];
-        for (int i = 1; i < rows() * cols(); i++) {
+        for (int32_t i = 1; i < rows() * cols(); i++) {
             if (contents[i] < min_val) {
                 min_val = contents[i];
             }
@@ -446,7 +477,7 @@ public:
      */
     T maxCoeff() const {
         T max_val = contents[0];
-        for (int i = 1; i < rows() * cols(); i++) {
+        for (int32_t i = 1; i < rows() * cols(); i++) {
             if (contents[i] > max_val) {
                 max_val = contents[i];
             }
@@ -538,7 +569,7 @@ public:
      */
     T sum() const {
         T output = T();
-        for (int i = 0; i < rows() * cols(); ++i) {
+        for (int32_t i = 0; i < rows() * cols(); ++i) {
             output += contents[i];
         }
         return output;
@@ -554,8 +585,8 @@ public:
     Matrix<T, MATRIX> transpose() const {
         Matrix<T, MATRIX> output(cols(), rows());
 
-        for (int r = 0; r < rows(); ++r)
-            for (int c = 0; c < cols(); ++c)
+        for (int32_t r = 0; r < rows(); ++r)
+            for (int32_t c = 0; c < cols(); ++c)
                 output(c, r) = (*this)(r, c);
 
         return output;
@@ -580,7 +611,6 @@ public:
 
         return result;
     }
-
 
 
 
@@ -622,64 +652,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-    /**
-     * Returns a reference to the coefficient at position (r, c).
-     *
-     * Provides mutable access to the matrix element at the given row and column.
-     *
-     * @param r Row index. Must satisfy 0 <= r < rows().
-     * @param c Column index. Must satisfy 0 <= c < cols()
-     * @return Reference to the element at position (r, c).
-     */
-    T& operator() (int r, int c) {
-        assert(0 <= r && r < rows() && "Access: Row out of bounds");
-        assert(0 <= c && c < cols() && "Access: Column out of bounds");
-        return contents[contents_index_at(r,c)];
-    }
-
-    /**
-     * Returns a constant reference to the coefficient at position (r, c).
-     *
-     * @param r Row index. Must satisfy 0 <= r < rows(). Default: none.
-     * @param c Column index. Must satisfy 0 <= c < cols(). Default: none.
-     * @return Const reference to the element at position (r, c).
-     */
-    const T& operator() (int r, int c) const {
-        assert(0 <= r && r < rows() && "Access: Row out of bounds");
-        assert(0 <= c && c < cols() && "Access: Column out of bounds");
-        return contents[contents_index_at(r,c)];
-    }
-
-
-    /**
-     * Returns a reference to the coefficient at position r.
-     * 
-     * For column vectors (i.e. static number of rows = 1) only.
-     * 
-     * @param r Row index. Must satisfy 0 <= r < rows().
-     * @return reference to the element at position r.
-     */
-    T& operator() (int r) {
-        static_assert(static_type == COLUMN_VECTOR, "Single-index access operator is for column vectors only");
-        assert(0 <= r && r < rows() && "Access for vector: Row out of bounds");
-        return contents[contents_index_at(r,0)];
-    }
-
-    /**
-     * Returns a constant reference to the coefficient at position r.
-     * 
-     * For column vectors (i.e. static number of rows = 1) only.
-     * 
-     * @param r Row index. Must satisfy 0 <= r < rows().
-     * @return constant reference to the element at position r.
-     */
-    const T& operator() (int r) const {
-        static_assert(static_type == COLUMN_VECTOR, "Single-index access operator is for column vectors only");
-        assert(0 <= r && r < rows() && "Access for vector: Row out of bounds");
-        return contents[contents_index_at(r,0)];
-    }
+    //OPERATOR OVERLOADS
 
 
     /**
@@ -705,9 +678,8 @@ public:
             contents = new T[n_rows * n_cols];
         }
     
-
         // Copy elements
-        for (int i = 0; i < n_rows * n_cols; ++i) {
+        for (int32_t i = 0; i < n_rows * n_cols; ++i) {
             contents[i] = other.contents[i];
         }
 
@@ -751,7 +723,7 @@ public:
      */
     Matrix operator+(T scalar) const {
         Matrix result(rows(), cols());
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             result.contents[i] = contents[i] + scalar; 
         }
         return result;
@@ -770,7 +742,7 @@ public:
         assert(cols() == other.cols() && "Matrix + matrix operation requires matrices to have the same number of columns");
 
         Matrix result(rows(), cols());
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             result.contents[i] = contents[i] + other.contents[i];
         }
         return result;
@@ -784,7 +756,7 @@ public:
      * @param scalar Scalar value to add
      */
     void operator+=(const T& scalar) {
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             contents[i] += scalar; 
         }
     }
@@ -800,7 +772,7 @@ public:
         assert(rows() == other.rows() && "+= operator: Row count must match");
         assert(cols() == other.cols() && "+= operator: Column count must match");
 
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             contents[i] += other.contents[i];
         }
     }
@@ -817,7 +789,7 @@ public:
      */
     Matrix operator-(const T& scalar) const {
         Matrix result(rows(), cols());
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             result.contents[i] = contents[i] - scalar;
         }
         return result;
@@ -836,7 +808,7 @@ public:
         assert(cols() == other.cols() && "Matrix - matrix operation requires matrices to have the same number of columns");
 
         Matrix result(rows(), cols());
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             result.contents[i] = contents[i] - other.contents[i];
         }
         return result;
@@ -850,7 +822,7 @@ public:
      * @param scalar Scalar value to subtract
      */
     void operator-=(T scalar) {
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             contents[i] -= scalar; 
         }
     }
@@ -866,7 +838,7 @@ public:
         assert(rows() == other.rows() && "+= operator: Row count must match");
         assert(cols() == other.cols() && "+= operator: Column count must match");
 
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             contents[i] -= other.contents[i];
         }
     }
@@ -900,7 +872,7 @@ public:
      * @param scalar Scalar value to multiply
      */
     void operator*=(const T& scalar) {
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             contents[i] *= scalar; 
         }
     }
@@ -917,7 +889,7 @@ public:
         assert(scalar != 0 && "Matrix scalar division- cannot divide by 0");
 
         Matrix result(rows(), cols());
-        for (int i = 0; i < rows()*cols(); i++) {
+        for (int32_t i = 0; i < rows()*cols(); i++) {
             result.contents[i] = contents[i] / scalar;
         }
         return result;
@@ -932,9 +904,68 @@ public:
     void operator/=(const T& scalar) {
         assert(scalar != 0 && "Divide-assign: Scalar to divide by cannot be 0");
 
-        for (int i = 0; i < rows()*cols(); ++i) {
+        for (int32_t i = 0; i < rows()*cols(); ++i) {
             contents[i] /= scalar;
         }
+    }
+
+
+
+    /**
+     * Returns a reference to the element at position (`row_index`, `col_index`).
+     *
+     * Provides mutable access to the matrix element at the given row and column.
+     *
+     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
+     * @param col_index Column index. Must satisfy 0 <= `col_index` < cols().
+     * @return Reference to the element at position (`row_index`, `col_index`).
+     */
+    T& operator() (int32_t row_index, int32_t col_index) {
+        assert(0 <= row_index && row_index < rows() && "Access: Row out of bounds");
+        assert(0 <= col_index && col_index < cols() && "Access: Column out of bounds");
+        return contents[contents_index_at(row_index,col_index)];
+    }
+
+    /**
+     * Returns a constant reference to the element at position (`row_index`, `col_index`).
+     *
+     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
+     * @param col_index Column index. Must satisfy 0 <= `col_index` < cols().
+     * @return Reference to the element at position (`row_index`, `col_index`).
+     */
+    const T& operator() (int32_t row_index, int32_t col_index) const {
+        assert(0 <= row_index && row_index < rows() && "Access: Row out of bounds");
+        assert(0 <= col_index && col_index < cols() && "Access: Column out of bounds");
+        return contents[contents_index_at(row_index,col_index)];
+    }
+
+
+    /**
+     * Returns a reference to the element at position `row_index`.
+     * 
+     * For column vectors (i.e. static number of rows = 1) only.
+     * 
+     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
+     * @return reference to the element at position `row_index`.
+     */
+    T& operator() (int32_t row_index) {
+        static_assert(static_type == COLUMN_VECTOR, "Single-index access operator is for column vectors only");
+        assert(0 <= row_index && row_index < rows() && "Access for vector: Row out of bounds");
+        return contents[contents_index_at(row_index, 0)];
+    }
+
+    /**
+     * Returns a constant reference to the element at position `row_index`.
+     * 
+     * For column vectors (i.e. static number of rows = 1) only.
+     * 
+     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
+     * @return constant reference to the element at position `row_index`.
+     */
+    const T& operator() (int32_t row_index) const {
+        static_assert(static_type == COLUMN_VECTOR, "Single-index access operator is for column vectors only");
+        assert(0 <= row_index && row_index < rows() && "Access for vector: Row out of bounds");
+        return contents[contents_index_at(row_index, 0)];
     }
 
 
@@ -1071,10 +1102,10 @@ inline Matrix<T, MATRIX> operator*(const Matrix<T, lhs_static_type>& lhs, const 
 
     Matrix<T, MATRIX> result(lhs.rows(), rhs.cols());
 
-    for (int i = 0; i < lhs.rows(); ++i) {
-        for (int j = 0; j < rhs.cols(); ++j) {
+    for (int32_t i = 0; i < lhs.rows(); ++i) {
+        for (int32_t j = 0; j < rhs.cols(); ++j) {
             result(i,j) = T();
-            for (int k = 0; k < lhs.cols(); ++k) {
+            for (int32_t k = 0; k < lhs.cols(); ++k) {
                 result(i,j) += lhs(i,k) * rhs(k,j);
             }
         }
@@ -1088,26 +1119,26 @@ inline Matrix<T, MATRIX> operator*(const Matrix<T, lhs_static_type>& lhs, const 
 template<typename CharT, typename Traits, typename Tp, MatrixStaticType m_static_type>
 std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& output_stream, const Matrix<Tp, m_static_type>& matr) {
     // Determine the width needed for each column
-    int col_width = 0;
+    int32_t col_width = 0;
 
-    for (int i = 0; i < matr.rows(); ++i) {
-        for (int j = 0; j < matr.cols(); ++j) {
-            // Round to 5 decimals for display
-            double rounded = std::round(matr(i,j) * 1e5) / 1e5;
+    for (int32_t i = 0; i < matr.rows(); ++i) {
+        for (int32_t j = 0; j < matr.cols(); ++j) {
+            // Round to 10 decimals for display
+            double rounded = std::round(matr(i,j) * 1e10) / 1e10;
 
             // Measure the width of the number as string
             std::basic_ostringstream<CharT, Traits, std::allocator<CharT>> ss;
             ss << rounded;
-            int len = static_cast<int>(ss.str().length());
+            int32_t len = static_cast<int32_t>(ss.str().length());
             if (len > col_width) col_width = len;
         }
     }
 
     // Output the matrix row by row
     output_stream << "[";
-    for (int i = 0; i < matr.rows(); ++i) {
+    for (int32_t i = 0; i < matr.rows(); ++i) {
         output_stream << ((i == 0) ? "[ " : " [ ");
-        for (int j = 0; j < matr.cols(); ++j) {
+        for (int32_t j = 0; j < matr.cols(); ++j) {
             double rounded = std::round(matr(i,j) * 1e5) / 1e5;
             output_stream << std::setw(col_width) << rounded;
             if (j != matr.cols() - 1)
