@@ -666,7 +666,7 @@ void test_batch_training() {
             vector<VectorXd> current_outputs = net.forward(inputs[i], BATCH_SIZE, true);
             net.reverse(current_outputs, expected_outputs[i], BATCH_SIZE);
 
-            for(int l = 0 ; l < current_outputs.size(); l++) {
+            for(int l = 0 ; l < (int)current_outputs.size(); l++) {
                 current_loss += loss_calc->compute_loss(current_outputs[l], expected_outputs[i][l]);
             }
         }
@@ -686,7 +686,7 @@ void test_batch_training() {
         //find maximum index
         double max = -99999;
         int max_index = -1;
-        for(int v=0; v<test_output.size(); v++) {
+        for(int v = 0; v < (int)test_output.size(); v++) {
             if(test_output(v) > max) {
                 max = test_output(v);
                 max_index = v;
@@ -732,21 +732,21 @@ const int N_INPUTS = 5; //Arbitary positive constant
     softmax_activ.reset();
 
     //get inputs and corresponding expected outputs
-    vector<vector<VectorXd>> inputs;
-    vector<vector<VectorXd>> expected_outputs;
+    DataLoader inputs = DataLoader(N_INPUTS);
+    for(int i = 0; i < N_OUTPUTS; i++) {
+        inputs.add(decimal_to_binary(N_INPUTS, i));
+    }
+    vector<VectorXd> outputs_vector;
+    for(int i = 0; i < N_OUTPUTS; i++) { 
+        outputs_vector.push_back(one_hot_vectorxd(N_OUTPUTS, i));
+    }
+    DataLoader outputs = DataLoader(outputs_vector);
+    
+    shuffle(inputs, outputs);
+
     const int BATCH_SIZE = N_OUTPUTS / 4;
     assert(BATCH_SIZE > 0 && "Test invalid- batch size is zero");
-    for(int i = 0; i < N_OUTPUTS / BATCH_SIZE; i++) {
-        vector<VectorXd> current_input;
-        vector<VectorXd> current_expected_output;
-        for(int b = 0; b < BATCH_SIZE; b++) {
-            current_input.push_back(decimal_to_binary(N_INPUTS, i * BATCH_SIZE + b));
-            current_expected_output.push_back(one_hot_vectorxd(N_OUTPUTS, i * BATCH_SIZE + b));
-        }
-        
-        inputs.push_back(current_input);
-        expected_outputs.push_back(current_expected_output);
-    }
+    
 
     //enable training
     net.enable();
@@ -757,12 +757,13 @@ const int N_INPUTS = 5; //Arbitary positive constant
     for(int e = 1; e <= N_EPOCHS; e++) {
 
         double current_loss = 0;
-        for(int i = 0; i < N_OUTPUTS / BATCH_SIZE; i++) {
-            vector<VectorXd> current_outputs = net.forward(inputs[i], BATCH_SIZE, true);
-            net.reverse(current_outputs, expected_outputs[i], BATCH_SIZE);
+        for(int i = 0; i < N_OUTPUTS; i++) {
+            vector<VectorXd> current_outputs = net.forward(inputs.next(BATCH_SIZE));
+            vector<VectorXd> expected_outputs = outputs.next(BATCH_SIZE);
+            net.reverse(current_outputs, expected_outputs);
 
-            for(int l = 0 ; l < current_outputs.size(); l++) {
-                current_loss += loss_calc->compute_loss(current_outputs[l], expected_outputs[i][l]);
+            for(int l = 0 ; l < (int)current_outputs.size(); l++) {
+                current_loss += loss_calc->compute_loss(current_outputs[l], expected_outputs[l]);
             }
         }
 
@@ -781,7 +782,7 @@ const int N_INPUTS = 5; //Arbitary positive constant
         //find maximum index
         double max = -99999;
         int max_index = -1;
-        for(int v=0; v<test_output.size(); v++) {
+        for(int v = 0; v < (int)test_output.size(); v++) {
             if(test_output(v) > max) {
                 max = test_output(v);
                 max_index = v;

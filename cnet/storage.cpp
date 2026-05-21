@@ -81,7 +81,7 @@ std::vector<std::string> remove_non_numbers(const std::vector<std::string>& inpu
     for(const string& input_str : input) {
         string current_output_str = "";
 
-        for (auto i = 0; i < input_str.length(); i++) {
+        for (int32_t i = 0; i < (int32_t)input_str.length(); i++) {
 
             //Digit 0-9, decimal point, negative sign, or space: add to output
             if(((int)input_str[i] >= 48 && (int)input_str[i] <= 57) || input_str[i] == '.' || input_str[i] == '-' || input_str[i] == ' ') {

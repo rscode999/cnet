@@ -3,6 +3,7 @@
 #include "layer.cpp"
 #include "loss_calculator.cpp"
 
+#include <atomic>
 #include <list>
 #include <thread>
 #include <vector>
@@ -528,7 +529,7 @@ private:
         for (int32_t t = 0; t < n_threads; ++t) {
             threads[t] = std::thread([&] {
                 int32_t idx;
-                while ((idx = next_idx.fetch_add(1)) < predictions.size()) {
+                while ((idx = next_idx.fetch_add(1)) < (int32_t)predictions.size()) {
                     gradients[idx] = compute_gradients(
                         cref(layers),
                         cref(initial_inputs[idx]),

@@ -1,13 +1,14 @@
 # CNet
 **C++ framework for writing neural networks**
 
-**As of version 1.4, the Eigen package is no longer required. You may use a minimized version of Eigen, called Eigen Lite, that comes with this repo. Note that not all Eigen operations, especially `array` and `dot`, are not supported in Eigen Lite.**  
-[Change Log](documentation/CHANGES.md)
+**NOTICE! Imports from "cnet/core.cpp" and "cnet/network.cpp" are deprecated! Import from "cnet/core.hpp" (note the different file extension) instead.**
 
 By using, viewing, or contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
 Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
 
 Additional class and method information is in the [documentation file](documentation/documentation.md).
+
+[Change Log](documentation/CHANGES.md)
 
 ## Foreword
 I ran my first neural network in the summer of 2024. The network was really deep, but I didn't have a good computer, so the network took hours to train.
@@ -54,13 +55,11 @@ your-repo-name/
 If you have GnuMake installed, change the `EIGEN_DIRECTORY_PATH` variable in the [Makefile](Makefile) to the name of your Eigen folder. If you wish to use Eigen Lite, change `EIGEN_DIRECTORY_PATH` to 'eigenlite'.  
 Your executable's name will be `OUTPUT_EXECUTABLE_NAME`.
 
-To use CNet in your program, include the "core.cpp" file in the "cnet" directory:
+To use CNet in your program, include the "core.hpp" file in the "cnet" directory:
 ```
-#include "cnet/core.cpp"
+#include "cnet/core.hpp"
 ```
 Note: This `include` statement automatically imports Eigen functionality.
-
-Including "cnet/network.cpp" does not include saving and loading networks from files.
 
 You may want to use the CNet namespace as well:
 ```
@@ -69,7 +68,7 @@ using namespace CNet;
 
 ## Quick Start Guide
 
-Ensure you have the line `#include "cnet/core.cpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in this repo's top-level directory. You may want to use the provided [main](main.cpp) file.
+Ensure you have the line `#include "cnet/core.hpp"` at the top of the file containing the `int main()` function. For best results, ensure your file with `main()` is in this repo's top-level directory. You may want to use the provided [main](main.cpp) file.
 
 To create a network, use the CNet namespace,* then create a new Network object:
 ```
@@ -262,23 +261,28 @@ g++ main.cpp  -o cnet -std=c++14  -I  eigenlite/ -O2 -Wall -Werror -Wpedantic
 
 All source code component files are found in the "cnet" folder.
 
-Inside "cnet", there are 5 main components:
+Network components in "cnet":
 - `activation_function.cpp`- contains the ActivationFunction class and its subclasses. Smart pointers to ActivationFunctions compute activation functions and their derivatives for layers.
 - `layer.cpp`- contains the Layer class, a linear layer of a network. The file also contains activation functions and their derivatives.
 - `loss_calculator.cpp`- contains the LossCalculator, which computes output losses and loss gradients for model optimization
 - `optimizer.cpp`- contains the Optimizer, for improving model weights given losses and a LossCalculator
 - `network.cpp`- contains the Network class, which contains all the other components
 
+Other source files in "cnet":
+- `data_loader.cpp`- contains the DataLoader class, a utility for storing vectors in batch training. Also contains a method to shuffle two DataLoaders in order
+- `storage.cpp`- contains methods for loading and storing networks to external files
+- `core.hpp`- header file for imports. **NOTICE! Imports from "core.cpp" are deprecated!**
+
 For more details on what each class does, consult the [documentation](documentation/documentation.md).
 
 Other than "cnet", the top-level directory contains:
-- `eigenlite/`, a minimized version of Eigen 3
-- Your Eigen 3 installation (optional), if you put Eigen in the correct location
-- `documentation/`, a directory containing detailed class and method documentation
+- `eigenlite/`, a minimized version of Eigen
+- Your Eigen installation (optional), if you put Eigen in the correct location
+- `documentation/`, a directory containing detailed class and method information
 - `main.cpp`, for users to write their code
 - `tests.cpp`, containing pre-built tests of network functionality
 - The project Makefile
-- The README
+- This README
 - Miscellaneous files
 
 

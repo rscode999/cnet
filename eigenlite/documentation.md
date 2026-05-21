@@ -14,8 +14,10 @@ This file is located in `eigenlite/documentation.md`.
 
 Eigen Lite implements only the functionality needed for CNet.
 
-All Eigen Lite functionality is under the `Eigen` namespace, identical to that of the full Eigen distribution.  
+All Eigen Lite functionality is under the `Eigen` namespace, identical to that of the full Eigen distribution.
+
 Eigen Lite defines `USING_EIGENLITE`, used for conditional compilation in case Eigen-specific functionality is used. Use conditional compilation checking for `USING_EIGENLITE` to choose between standard Eigen and Eigen Lite.
+
 
 ## Table of Contents
 - [Matrix](#matrix)
@@ -175,41 +177,13 @@ For statically typed column vectors only.
 
 #### at (Matrix)
 
-*Signature:* `const T& at(int32_t row_index, int32_t col_index) const`
-
-Returns a constant reference to the matrix element at position `(row_index, col_index)`.
-
-Value indexing is 0-based. The top left value is at position (0, 0).
-
-**Returns**
-
-* `const T&`: Constant reference to the matrix element at position `(row_index, col_index)`.
-
-**Parameters**
-
-* `row_index` (`int32_t`): The row index. Must satisfy `0 <= row_index < rows()`.
-* `col_index` (`int32_t`): The column index. Must satisfy `0 <= col_index < cols()`.
+**DEPRECATED for not existing in standard Eigen.**
 
 ---
 
-
 #### at (Column Vector)
 
-*Signature:* `const T& at(int32_t row_index) const`
-
-Returns a constant reference to the element at position `row_index`.
-
-Value indexing is 0-based. The top value is at position 0.
-
-For statically-typed column vectors only.
-
-**Returns**
-
-* `const T&`: Constant reference to the matrix element at position `row_index` in a column vector.
-
-**Parameters**
-
-* `row_index` (`int32_t`): The row index. Must satisfy `0 <= row_index < rows()`.
+**DEPRECATED for not existing in standard Eigen.**
 
 ---
 

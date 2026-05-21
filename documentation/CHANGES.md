@@ -1,5 +1,26 @@
 # Changes
 
+## 1.5.0
+**In Development**
+
+### Overall
+
+- Fixed tests to compile under the `-Wpedantic` flag.
+- Properly used `#pragma once` exclusion.
+- Deprecated compilation from "network.cpp" and "core.cpp". Added "core.hpp".
+
+### Eigen Lite
+
+- Deprecated the `at` method for not existing in standard Eigen.
+
+### DataLoader (NEW)
+
+- Added the `DataLoader` class to facilitate batch training.
+
+### Network
+
+- (IN DEVELOPMENT) Changed Networks to use smart pointers to Layers instead of using raw Layers.
+
 ## 1.4.0
 **26 March 2026**
 

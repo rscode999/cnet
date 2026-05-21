@@ -22,7 +22,7 @@ private:
     /**
      * List of network inputs
      */
-    std::vector<Eigen::VectorXd> inputs;
+    std::vector<Eigen::VectorXd> vectors;
 
     /**
      * Length of the input vectors. Must be positive.
@@ -42,6 +42,8 @@ private:
     /////////////////////////////////////////////////////////////////////////////////////
 
 public:
+    friend void shuffle(DataLoader& loader1, DataLoader& loader2, unsigned int seed);
+
     /**
      * Creates an empty DataLoader of input dimension `input_vector_dimension`.
      * @param input_vector_dimension dimension of the DataLoader's input vectors. Must be positive.
@@ -58,11 +60,11 @@ public:
      */
     DataLoader(std::vector<Eigen::VectorXd> initial_inputs) {
         next_input = 0;
-        inputs = {};
+        vectors = {};
 
         for(int32_t i = 0; i < (int32_t)initial_inputs.size(); i++) {
             assert(initial_inputs[i].size() == initial_inputs[0].size() && "All inputs to a DataLoader must have the same size");
-            inputs.push_back(initial_inputs[i]);
+            vectors.push_back(initial_inputs[i]);
         }
         input_dimension = initial_inputs[0].size();
     }
@@ -76,7 +78,7 @@ public:
      * @return the DataLoader's data, as a `std::vector<Eigen::VectorXd>`
      */
     std::vector<Eigen::VectorXd> data() const {
-        return inputs;
+        return vectors;
     }
 
 
@@ -87,12 +89,12 @@ public:
      */
     Eigen::VectorXd next() {
         //Ensure there is a next input
-        if(inputs.size() <= 0) {
+        if(vectors.size() <= 0) {
             throw std::out_of_range("Cannot load next value from an empty DataLoader");
         }
 
-        Eigen::VectorXd output = inputs[next_input];
-        next_input = (next_input + 1) % (int32_t)inputs.size();
+        Eigen::VectorXd output = vectors[next_input];
+        next_input = (next_input + 1) % (int32_t)vectors.size();
         return output;
     }
 
@@ -107,15 +109,15 @@ public:
      */
     std::vector<Eigen::VectorXd> next(int32_t load_amount) {
         //Ensure there is a next input
-        if(load_amount > (int32_t)inputs.size()) {
+        if(load_amount > (int32_t)vectors.size()) {
             throw std::out_of_range("Too few vectors in the DataLoader");
         }
 
         std::vector<Eigen::VectorXd> output;
 
         for(int32_t i = 0; i < load_amount; i++) {
-            output.push_back(inputs[next_input]);
-            next_input = (next_input + 1) % (int32_t)inputs.size();
+            output.push_back(vectors[next_input]);
+            next_input = (next_input + 1) % (int32_t)vectors.size();
         }
         
         return output;
@@ -136,7 +138,7 @@ public:
      * @return number of vectors managed by this DataLoader
      */
     int32_t size() const {
-        return (int32_t)inputs.size();
+        return (int32_t)vectors.size();
     }
 
 
@@ -160,7 +162,7 @@ public:
      */
     void add(const Eigen::VectorXd& new_input) {
         assert(new_input.size() == vector_input_dimension() && "DataLoader add operation requires vectors to have dimension vector_input_dimension()");
-        inputs.push_back(new_input);
+        vectors.push_back(new_input);
     }
 
 
@@ -169,7 +171,7 @@ public:
      * Removes all input vectors from the DataLoader.
      */
     void clear() {
-        inputs.clear();
+        vectors.clear();
         next_input = 0;
     }
 
@@ -183,36 +185,37 @@ public:
     void set(int32_t index, const Eigen::VectorXd& new_input) {
         assert(0 <= index && index < size() && "DataLoader replace-at index must be on the interval [0, size() - 1]");
         assert(new_input.size() == vector_input_dimension() && "DataLoader replace-at operation requires vectors to have dimension vector_input_dimension()");
-        inputs[index] = new_input;
+        vectors[index] = new_input;
     }
+
 
     /////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////
     //METHODS
 
     /**
-     * Randomly permutes the DataLoader's data
+     * Randomly permutes the DataLoader's data.
+     * @param seed seed for the random number generator; random if set to 0. Default 0.
      */
-    void shuffle() {
+    void shuffle(unsigned int seed = 0) {
+
         // Random number generator
         static std::random_device rd;
-        static std::mt19937 gen(rd());
-        std::uniform_real_distribution<double> dist(0.0, (double)inputs.size());
+        static std::mt19937 gen((seed == 0) ? rd() : seed);
+        std::uniform_real_distribution<double> dist(0.0, (double)size());
 
-        for(int32_t i = (int32_t)inputs.size() - 1; i > 0; i--) {
+        for(int32_t i = (int32_t)size() - 1; i > 0; i--) {
             //random index from 0 to i
             const int32_t random_index = ((int32_t)dist(gen)) % i;
 
             //switch indices
-            Eigen::VectorXd temp = inputs[i];
-            inputs[i] = inputs[random_index];
-            inputs[random_index] = temp;
+            Eigen::VectorXd temp = vectors[i];
+            vectors[i] = vectors[random_index];
+            vectors[random_index] = temp;
         } 
-        
-        next_input = 0;
     }
 
-
+ 
     /////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////
     //OPERATOR OVERLOADS
@@ -223,8 +226,8 @@ public:
      * @return the `index`-th input of the DataLoader
      */
     Eigen::VectorXd& operator[](int32_t index) {
-        assert(0 <= index && index < (int32_t)inputs.size() && "Array-access operator requires index to be on [0, size() - 1]");
-        return inputs[index];
+        assert(0 <= index && index < (int32_t)vectors.size() && "Array-access operator requires index to be on [0, size() - 1]");
+        return vectors[index];
     }
 
     /**
@@ -233,10 +236,46 @@ public:
      * @return the `index`-th input of the DataLoader
      */
     const Eigen::VectorXd& operator[](int32_t index) const {
-        assert(0 <= index && index < (int32_t)inputs.size() && "Array-access operator requires index to be on [0, size() - 1]");
-        return inputs[index];
+        assert(0 <= index && index < (int32_t)vectors.size() && "Array-access operator requires index to be on [0, size() - 1]");
+        return vectors[index];
     }
 };
+
+
+
+/**
+ * Randomly permutes the data of `loader1` and `loader2`.
+ * 
+ * Corresponding elements in both loaders remain aligned after shuffling.
+ * 
+ * Mutates both DataLoader inputs.
+ * 
+ * @param loader1 first DataLoader to shuffle
+ * @param loader2 second DataLoader to shuffle. Must have the same amount of vectors as `loader1`
+ * @param seed seed for the random number generator; random if set to 0. Default 0.
+ */
+void shuffle(DataLoader& loader1, DataLoader& loader2, unsigned int seed = 0) {
+    assert(loader1.size() == loader2.size() && "Shuffle requires both DataLoaders to have the same size");
+
+    // Random number generator
+    static std::random_device rd;
+    static std::mt19937 gen = std::mt19937( (seed == 0) ? rd() : seed);
+    std::uniform_real_distribution<double> dist(0.0, (double)loader1.size());
+
+    for(int32_t i = (int32_t)loader1.size() - 1; i > 0; i--) {
+        //random index from 0 to i
+        const int32_t random_index = ((int32_t)dist(gen)) % i;
+
+        //switch indices
+        Eigen::VectorXd temp = loader1.vectors[i];
+        loader1.vectors[i] = loader1.vectors[random_index];
+        loader1.vectors[random_index] = temp;
+
+        temp = loader2.vectors[i];
+        loader2.vectors[i] = loader2.vectors[random_index];
+        loader2.vectors[random_index] = temp;
+    } 
+}
 
 
 

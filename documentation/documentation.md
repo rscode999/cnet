@@ -59,29 +59,43 @@ Available classes:
 <br>
 
 - [Network](#network)
-    - [Constructor](#constructor)
-    - [Getters](#getters)
-    - [Setters](#setters)
-    - [Methods](#methods)
-    - [Operator Overloads](#operator-overloads)
+  - [Constructor](#constructor)
+  - [Getters](#getters)
+  - [Setters](#setters)
+  - [Methods](#methods)
+  - [Operator Overloads](#operator-overloads)
+
 - [ActivationFunction (Abstract class)](#activationfunction)
-    - [Constructor](#constructor-1)
-    - [Methods](#methods-1)
+  - [Constructor](#constructor-1)
+  - [Getters](#getters-1)
+  - [Methods](#methods-1)
+
+- [DataLoader](#dataloader)
+  - [Constructors](#constructor-2)
+  - [Getters](#getters-2)
+  - [Setters](#setters-1)
+  - [Methods](#methods-2)
+  - [Operator Overloads](#operator-overloads-1)
+
 - [Layer](#layer)
-    - [Constructors](#constructor-2)
-    - [Getters](#getters-1)
-    - [Setters](#setters-1)
-    - [Methods](#methods-2)
-    - [Operator Overloads](#operator-overloads-1)
+  - [Constructors](#constructor-3)
+  - [Getters](#getters-3)
+  - [Setters](#setters-2)
+  - [Methods](#methods-3)
+  - [Operator Overloads](#operator-overloads-2)
+
 - [LossCalculator (Abstract class)](#losscalculator)
-    - [Constructor](#constructor-3)
-    - [Methods](#methods-3)
+  - [Constructor](#constructor-4)
+  - [Getters](#getters-4)
+  - [Methods](#methods-4)
+
 - [Optimizer (Abstract class)](#optimizer-1)
     - [Detailed optimizer documentation ->](optimizers.md)
 
 <br>
 
 - [Standalone Methods (not in classes)](#standalone-methods)
+  - [DataLoader Methods](#dataloader-methods)
   - [Loading and Storing Networks](#loading-and-storing-networks)
   - [Creating Network Components by Name](#creating-network-components-by-name)
 
@@ -870,6 +884,52 @@ Example:
 
 ---
 ---
+### Getters
+
+#### name
+
+*Signature:* `virtual std::string name() const`
+
+Returns the unique identifier for the activation function.
+
+`IdentityActivation`'s name is "none".
+
+A function object's name is usually the class's name converted to lowercase, with underscores separating each word. Example: `Relu`'s name is "relu".
+
+<details>
+<summary>Implementation Details</summary>
+
+If this method is not overridden, this method returns "none", as with the `IdentityActivation`.
+
+</details>
+<br>
+
+**Returns**
+
+* `std::string`: Name of the activation function.
+
+---
+
+#### using\_pre\_activation
+
+*Signature:* `virtual bool using_pre_activation() const`
+
+Indicates whether the activation function should be applied on pre-activation inputs.
+
+<details>
+<summary>Implementation Details</summary>
+
+If not overridden, this method returns `false`.
+
+</details>
+<br>
+
+**Returns**
+
+* `bool`: `true` if pre-activation input is used, `false` otherwise.
+
+---
+---
 
 ### Methods
 
@@ -903,50 +963,235 @@ Applies the derivative of the activation function element-wise to the input.
 
 * `input` (`const Eigen::VectorXd&`): Value to calculate.
 
+
+---
+---
 ---
 
-#### name
 
-*Signature:* `virtual std::string name() const`
+## DataLoader
 
-Returns the unique identifier for the activation function.
+Utility class that stores and feeds data to a Network.
 
-`IdentityActivation`'s name is "none".
+Stores input vectors, as type `Eigen::VectorXd`, of a specified nonzero length. Gives a specified amount of the stored vectors inside a `std::vector`, for use in network training.
 
-A function object's name is usually the class's name converted to lowercase, with underscores separating each word. Example: `Relu`'s name is "relu".
+---
+---
+
+### Constructor
+
+#### Input dimension
+
+*Signature*: `DataLoader(int32_t input_vector_dimension)`
+
+Creates an empty DataLoader requiring input vectors of dimension `input_vector_dimension`.
+
+**Parameters**
+
+* `input_vector_dimension` (`int32_t`): Required dimension of all vectors stored in the DataLoader. Must be positive.
+
+---
+
+#### Initial inputs
+
+*Signature*: `DataLoader(std::vector<Eigen::VectorXd> initial_inputs)`
+
+Creates a `DataLoader` initialized with `initial_inputs`.
+
+**Parameters**
+
+* `initial_inputs` (`std::vector<Eigen::VectorXd>`): Initial vectors to store. All vectors must have the same nonzero dimension.
+
+---
+---
+
+### Getters
+
+#### data
+
+*Signature*: `std::vector<Eigen::VectorXd> data() const`
+
+Returns a deep copy of all vectors stored in the DataLoader.
+
+**Returns**
+
+* `std::vector<Eigen::VectorXd>`: Stored input vectors.
+
+---
+
+#### next (no arguments)
+
+*Signature*: `Eigen::VectorXd next()`
+
+Returns the next vector in the DataLoader. Throws `std::out_of_range` if the DataLoader has no vectors.
+
+When the final vector in the DataLoader (i.e. index `{loaderName}.size() - 1`) is loaded, the next vector to load becomes the DataLoader's first (i.e. index 0).
+
+**Returns**
+
+* `Eigen::VectorXd`: The next input vector.
+
+**Exceptions**
+
+* `std::out_of_range`: If the `DataLoader` is empty.
+
+---
+
+#### next (load amount)
+
+*Signature*: `std::vector<Eigen::VectorXd> next(int32_t load_amount)`
+
+Returns the next `load_amount` vectors in the DataLoader. Throws `std::out_of_range` if too many vectors are requested.
+
+The internal index advances cyclically for each loaded vector.
+
+**Returns**
+
+* `std::vector<Eigen::VectorXd>`: The next `load_amount` input vectors stored in the DataLoader.
+
+**Parameters**
+
+* `load_amount` (`int32_t`): Number of vectors to load.
+
+**Exceptions**
+
+* `std::out_of_range`: If `load_amount` is greater than `size()`.
+
+---
+
+#### next_input_index
+
+*Signature*: `int32_t next_input_index() const`
+
+Returns the index of the next vector to load.
+
+Indices are integers on the interval [0, `{loaderName}.size()`-1].
+
+**Returns**
+
+* `int32_t`: 0-based index of the next input vector.
+
+---
+
+#### size
+
+*Signature*: `int32_t size() const`
+
+Returns the number of vectors stored in the `DataLoader`.
+
+**Returns**
+
+* `int32_t`: Number of stored vectors.
+
+---
+
+#### vector_input_dimension
+
+*Signature*: `int32_t vector_input_dimension() const`
+
+Returns the required dimension of vectors accepted by the `DataLoader`.
+
+Attempting to add vectors that are not of length `vector_input_dimension()` results in an error.
+
+**Returns**
+
+* `int32_t`: Required length of vectors.
+
+---
+---
+
+### Setters
+
+#### add
+
+*Signature*: `void add(const Eigen::VectorXd& new_input)`
+
+Adds `new_input` to the DataLoader.
+
+**Parameters**
+
+* `new_input` (`const Eigen::VectorXd&`): Vector to add. Must have dimension `vector_input_dimension()`.
+
+---
+
+#### clear
+
+*Signature*: `void clear()`
+
+Removes all vectors from the DataLoader. Resets the next input index to 0.
+
+Note: Attempting to load from the DataLoader immediately after calling this method causes an error.
+
+---
+
+#### set
+
+*Signature*: `void set(int32_t index, const Eigen::VectorXd& new_input)`
+
+Replaces the vector at `index` with `new_input`.
+
+**Parameters**
+
+* `index` (`int32_t`): Element index to replace. Must be on the interval [0, `size()`-1].
+* `new_input` (`const Eigen::VectorXd&`): Replacement vector. Must have dimension `vector_input_dimension()`.
+
+---
+---
+
+### Methods
+
+#### shuffle
+*Signature:* `void shuffle(unsigned int seed = 0)`
+
+Randomly permutes the DataLoader's data.
+
+*For synchronized shuffling with another DataLoader, use the [standalone method](#shuffle-1) with 2 arguments.
 
 <details>
-<summary>Implementation Details</summary>
-
-If this method is not overridden, this method returns "none", as with the `IdentityActivation`.
+  <summary>Implementation Details</summary>
+  
+Uses the Fisher-Yates shuffling algorithm.
 
 </details>
 <br>
 
+**Parameters**
+* `seed` (`unsigned int`): Seed for random number generation; uses random seed if set to 0. Default 0.
+
+---
+---
+
+### Operator Overloads
+
+#### element access [], non-const
+
+*Signature*: `Eigen::VectorXd& operator[](int32_t index)`
+
+Returns a mutable reference to the vector at `index`.
+
 **Returns**
 
-* `std::string`: Name of the activation function.
+* `Eigen::VectorXd&`: Reference to the `index`-th vector.
 
+**Parameters**
+
+* `index` (`int32_t`): Element index to access. Must be on the interval [0, `size()`-1].
 
 ---
 
-#### using\_pre\_activation
+#### element access [], const
 
-*Signature:* `virtual bool using_pre_activation() const`
+*Signature*: `const Eigen::VectorXd& operator[](int32_t index) const`
 
-Indicates whether the activation function should be applied on pre-activation inputs.
-
-<details>
-<summary>Implementation Details</summary>
-
-If not overridden, this method returns `false`.
-
-</details>
-<br>
+Returns a const reference to the vector at `index`.
 
 **Returns**
 
-* `bool`: `true` if pre-activation input is used, `false` otherwise.
+* `const Eigen::VectorXd&`: Const reference to the `index`-th vector.
+
+**Parameters**
+
+* `index` (`int32_t`): Element index to access. Must be on the interval [0, `size()`-1].
 
 
 
@@ -1237,7 +1482,6 @@ std::cout << layer;
 * `layer` (`Layer`): Layer to export.
 
 
-
 ---
 ---
 ---
@@ -1279,6 +1523,29 @@ Example: `MeanSquaredError()`
 ---
 ---
 
+### Getters
+
+#### name
+
+*Signature:* `virtual std::string name()`
+
+Returns the identifying string of the loss calculator.
+
+<details>
+<summary>Implementation Details</summary>
+
+This method is purely virtual. Subclasses must override this method.
+
+</details>
+<br>
+
+**Returns**
+
+* `std::string`: Name of the loss calculator (typically, the lowercased class name with underscores separating words, e.g. `"cross_entropy"`).
+
+---
+---
+
 ### Methods
 
 #### compute\_loss
@@ -1312,26 +1579,6 @@ Returns the gradient of the losses when measured between `predictions` and `actu
 
 * `predictions` (`const Eigen::VectorXd&`): Model's predictions for a given input
 * `actuals` (`const Eigen::VectorXd&`): True values for model predictions. Must have the same number of rows as `predictions`.
-
----
-
-#### name
-
-*Signature:* `virtual std::string name()`
-
-Returns the identifying string of the loss calculator.
-
-<details>
-<summary>Implementation Details</summary>
-
-This method is purely virtual. Subclasses must override this method.
-
-</details>
-<br>
-
-**Returns**
-
-* `std::string`: Name of the loss calculator (typically, the lowercased class name with underscores separating words, e.g. `"cross_entropy"`).
 
 
 ---
@@ -1368,7 +1615,43 @@ The file "optimizer.cpp" contains the method `make_optimizer`. If creating a new
 
 Methods that are *not* part of a class. 
 
-Includes functions to load and store network configurations to an external file, and functions to create network components by name.
+Includes shuffling DataLoaders, functions to load and store network configurations to an external file, and functions to create network components by name.
+
+---
+---
+
+### DataLoader Methods
+
+#### shuffle
+*Signature:* `void shuffle(DataLoader& loader1, DataLoader& loader2, unsigned int seed = 0)`
+
+Randomly permutes the data of `loader1` and `loader2`. Corresponding elements in both loaders remain aligned. 
+
+Mutates both DataLoader inputs.
+
+Example
+```
+using namespace CNet;
+//`network_inputs` and `network_outputs` are std::vectors of network inputs + outputs.
+
+DataLoader input_loader = DataLoader(network_inputs);
+DataLoader output_loader = DataLoader(network_outputs);
+
+shuffle(input_loader, output_loader);
+```
+
+<details>
+  <summary>Implementation Details</summary>
+  
+Uses the Fisher-Yates shuffling algorithm.
+
+</details>
+<br>
+
+**Parameters**
+* `loader1` (`DataLoader&`): First DataLoader to shuffle
+* `loader2` (`DataLoader&`): Second DataLoader to shuffle. Must have the same number of elements as `loader1`.
+* `seed` (`unsigned int`): Seed for random number generation; uses random seed if set to 0. Default 0.
 
 ---
 ---

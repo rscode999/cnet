@@ -138,7 +138,7 @@ public:
      * @param n_cols Number of columns to use. Must be positive (and must equal the static row count, if not Dynamic)
      */
     Matrix(int32_t n_rows, int32_t n_cols) : n_rows(n_rows), n_cols(n_cols) {
-        assert(static_type == MATRIX || n_cols == 1 && "Row+column constructor is for matrices only");
+        assert((static_type == MATRIX || n_cols == 1) && "Row+column constructor is for matrices only");
         contents = new T[n_rows * n_cols];
     }
 
@@ -212,11 +212,7 @@ public:
     //GETTERS
 
     /**
-     * Returns a constant reference to the element at position (`row_index`, `col_index`).
-     *
-     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
-     * @param col_index Column index. Must satisfy 0 <= `col_index` < cols().
-     * @return Reference to the element at position (`row_index`, `col_index`).
+     * DEPRECATED for not existing in standard Eigen.
      */
     const T& at(int32_t row_index, int32_t col_index) const {
         assert(0 <= row_index && row_index < rows() && "Access: Row out of bounds");
@@ -225,12 +221,7 @@ public:
     }
 
     /**
-     * Returns a constant reference to the element at position `row_index`.
-     * 
-     * For column vectors (i.e. static number of rows = 1) only.
-     * 
-     * @param row_index Row index. Must satisfy 0 <= `row_index` < rows().
-     * @return constant reference to the element at position `row_index`.
+     * DEPRECATED for not existing in standard Eigen.
      */
     const T& at(int32_t row_index) const {
         static_assert(static_type == COLUMN_VECTOR, "Single-index retrieval operation is for column vectors only");
@@ -975,6 +966,9 @@ public:
      * Loads this matrix with the specified comma-separated elements in row-major order.
      * 
      * The amount of elements loaded must equal `rows()`*`cols()`.
+     * 
+     * @param value comma-separated list of elements. Length must equal `rows()`*`cols()`
+     * @return internal CommaInitializer object
      */
     template<typename Tp>
     CommaInitializer operator<<(Tp value) {

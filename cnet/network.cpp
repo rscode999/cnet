@@ -712,7 +712,7 @@ public:
         using namespace Eigen;
 
         assert(inputs.size() > 0 && "Inputs list cannot be empty");
-        assert(n_threads > 0 && n_threads <= inputs.size() && "Number of threads in multi-input reverse operation must be between 1 and `inputs.size()`");
+        assert(n_threads > 0 && n_threads <= (int32_t)inputs.size() && "Number of threads in multi-input reverse operation must be between 1 and `inputs.size()`");
         
         //Enable check
         if(!enabled) {
@@ -726,8 +726,8 @@ public:
             //set initial inputs for the examples
 
             initial_inputs.resize(inputs.size());
-            for(int32_t i = 0; i < inputs.size(); i++) {
-                assert(inputs[i].size() == input_dimension() && "All initial inputs in the multiple-input forward pass must have `input_dimension()` elements");
+            for(int32_t i = 0; i < (int32_t)inputs.size(); i++) {
+                assert((int32_t)inputs[i].size() == input_dimension() && "All initial inputs in the multiple-input forward pass must have `input_dimension()` elements");
                 initial_inputs[i] = inputs[i];
             }
             
@@ -787,14 +787,6 @@ public:
         #endif
         
         return outputs;
-    }
-
-
-    /**
-     * Not yet implemented.
-     */
-    std::vector<Eigen::VectorXd> forward(DataLoader& loader) {
-        throw std::runtime_error("Not yet implemented");
     }
 
 
@@ -879,7 +871,7 @@ public:
                 assert(a.size() == output_dimension() && "Multi-input reverse operation requires all actuals' dimensions to equal `output_dimension()`");
             }
         #endif 
-        assert(n_threads > 0 && n_threads <= predictions.size() && "Number of threads in multi-input reverse operation must be between 1 and `predictions.size()`");
+        assert(n_threads > 0 && n_threads <= (int32_t)predictions.size() && "Number of threads in multi-input reverse operation must be between 1 and `predictions.size()`");
         
         //Enable check
         if(!enabled) {
