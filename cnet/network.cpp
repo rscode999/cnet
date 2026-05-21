@@ -1,7 +1,9 @@
+#pragma once
+
+#include "data_loader.cpp"
 #include "optimizer.cpp"
 #include <stdexcept>
 
-#pragma once
 
 /**
  * Thrown to indicate that the network is not in the proper state to call a method.
@@ -785,6 +787,14 @@ public:
         #endif
         
         return outputs;
+    }
+
+
+    /**
+     * Not yet implemented.
+     */
+    std::vector<Eigen::VectorXd> forward(DataLoader& loader) {
+        throw std::runtime_error("Not yet implemented");
     }
 
 

@@ -1,11 +1,11 @@
+#pragma once
+
 #include "layer.cpp"
 #include "loss_calculator.cpp"
 
 #include <list>
 #include <thread>
 #include <vector>
-
-#pragma once
 
 
 namespace CNet {

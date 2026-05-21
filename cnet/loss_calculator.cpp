@@ -1,8 +1,9 @@
+#pragma once
+
 #include <string>
 
 #include <Eigen/Core>
 
-#pragma once
 
 namespace CNet {
 

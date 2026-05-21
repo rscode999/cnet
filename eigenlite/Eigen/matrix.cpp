@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cassert>
 #include <cstdint>
 #include <cmath>
@@ -7,13 +9,12 @@
 #include <random>
 
 
-
 /**
  * Indicates that Eigen Lite is being used (rather than the full Eigen distribution)
  */
 #define USING_EIGENLITE
 
-#pragma once
+
 
 
 namespace Eigen {
@@ -504,11 +505,11 @@ public:
         // Random number generator
         static std::random_device rd;
         static std::mt19937 gen(rd());
-        std::uniform_real_distribution<T> dist(T(-1 * abs(range)), T(abs(range)));
+        std::uniform_real_distribution<double> dist((double)(-1 * abs(range)), (double)(abs(range)));
 
         for (int32_t r = 0; r < n_rows; ++r) {
             for (int32_t c = 0; c < n_cols; ++c) {
-                result(r, c) = dist(gen);
+                result(r, c) = (T)dist(gen);
             }
         }
 

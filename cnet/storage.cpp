@@ -1,10 +1,10 @@
+#pragma once
+
 #include <algorithm>
 #include <cctype>
 #include <fstream>
 
 #include "network.cpp"
-
-#pragma once
 
 namespace CNet {
 

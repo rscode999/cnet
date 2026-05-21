@@ -1,6 +1,6 @@
-#include "activation_function.cpp"
-
 #pragma once
+
+#include "activation_function.cpp"
 
 
 namespace CNet {
