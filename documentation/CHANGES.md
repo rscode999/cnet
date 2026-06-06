@@ -1,7 +1,8 @@
 # Changes
 
 ## 1.5.0
-**In Development**
+**27 May 2026, finalized 6 June 2026**  
+DataLoader addition
 
 ### Overall
 
@@ -17,12 +18,10 @@
 
 - Added the `DataLoader` class to facilitate batch training.
 
-### Network
-
-- (IN DEVELOPMENT) Changed Networks to use smart pointers to Layers instead of using raw Layers.
 
 ## 1.4.0
-**26 March 2026**
+**26 March 2026**  
+Removed dependence on the Eigen package.
 
 ### Overall
 
@@ -40,7 +39,8 @@
 
 
 ## 1.3.0
-**30 January 2026**
+**30 January 2026**  
+Multithreaded batch training.
 
 ### Network
 
@@ -53,7 +53,8 @@
 
 
 ## 1.2.0
-**1 December 2025**
+**1 December 2025**  
+Saving network configurations to files.
 
 ### Overall
 
@@ -61,7 +62,8 @@
 
 
 ## 1.1.0
-**5 October 2025**
+**5 October 2025**  
+Batch training
 
 ### Overall
 
