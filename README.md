@@ -1,14 +1,13 @@
 # CNet
 **C++ framework for writing neural networks**
 
-**NOTICE! Imports from "cnet/core.cpp" and "cnet/network.cpp" are deprecated! Import from "cnet/core.hpp" (note the different file extension) instead.**
-
 By using, viewing, or contributing to this project, you agree to follow the rules listed in the [rules document](documentation/rules.md). Failure to follow the rules means I will hunt you down and [DATA EXPUNGED].  
 Do not push to any version branches (i.e. "v0.9.0") or "main" without my explicit permission... or else.
 
-Additional class and method information is in the [documentation file](documentation/documentation.md).
-
+Additional class and method information is in the [documentation file](documentation/documentation.md).  
 [Change Log](documentation/CHANGES.md)
+
+[Try CNet 2 for more features!](https://github.com/rscode999/cnet2)
 
 ## Foreword
 I ran my first neural network in the summer of 2024. The network was really deep, but I didn't have a good computer, so the network took hours to train.
