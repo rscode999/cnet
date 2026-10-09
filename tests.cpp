@@ -1,5 +1,6 @@
 #include "cnet/core.cpp"
 
+#include <chrono>
 #include <iostream>
 
 using namespace std;
@@ -258,6 +259,7 @@ VectorXd one_hot_vectorxd(int n_indices, int input) {
  * Uses ReLU and softmax activations, along with cross-entropy loss.
  */
 void test_training_binconvert() {
+
     const int N_INPUTS = 6; //Arbitary positive constant
     const int N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
     const int N_EPOCHS = 1600; //Positive constant
@@ -801,6 +803,85 @@ const int N_INPUTS = 5; //Arbitary positive constant
 
 
 
+void speed_test() {
+    using std::chrono::steady_clock;
+
+    double average_runtime = 0;
+
+    for (int32_t t = 0; t < 10; t++) {
+
+        const int32_t N_INPUTS = 5; //Arbitary positive constant
+        const int32_t N_OUTPUTS = round(pow(2, N_INPUTS)); //Equals 2^N_INPUTS
+        const int32_t N_EPOCHS = 2000; //Positive constant
+
+        Network net = Network();
+
+        shared_ptr<SGD> optimizer = make_shared<SGD>(0.005, 0.9);
+        net.set_optimizer(optimizer);
+        optimizer.reset();
+
+        shared_ptr<CrossEntropy> loss_calc = make_shared<CrossEntropy>();
+        // shared_ptr<MeanSquaredError> loss_calc = make_shared<MeanSquaredError>(); //Should also run, but with ~50% accuracy
+        net.set_loss_calculator(loss_calc);
+        //Keep the loss calculator outside the network for per-epoch loss calculations
+
+        //add layers
+        shared_ptr<Relu> relu_activ = make_shared<Relu>();
+        shared_ptr<Softmax> softmax_activ = make_shared<Softmax>();
+        net.add_layer(N_INPUTS, 20, relu_activ, "layer0");
+        net.add_layer(20, 40, relu_activ, "layer1"); //test: change to softmax and ensure the "enable" check fails
+        net.add_layer(40, N_OUTPUTS, softmax_activ, "layer2");
+        relu_activ.reset();
+        softmax_activ.reset();
+
+        net.enable();
+
+        //get inputs and corresponding expected outputs
+        vector<VectorXd> inputs;
+        vector<VectorXd> expected_outputs;
+        for(int i=0; i<N_OUTPUTS; i++) {
+            VectorXd current_input = decimal_to_binary(N_INPUTS, i);
+            inputs.push_back(current_input);
+
+            VectorXd current_output = one_hot_vectorxd(N_OUTPUTS, i);
+            expected_outputs.push_back(current_output);
+        }
+
+        //train
+        steady_clock::time_point start = steady_clock::now();
+
+        for (int32_t e = 0; e < N_EPOCHS; e++) {
+            for (int i = 0; i < (int32_t)inputs.size(); i++) {
+                VectorXd out = net.forward(inputs[i]);
+                net.reverse(out, expected_outputs[i]);
+            }
+        }
+        steady_clock::time_point end = steady_clock::now();
+
+        //evaluate
+        for (int i = 0; i < (int32_t)inputs.size(); i++) {
+            VectorXd out = net.forward(inputs[i], false);
+            Eigen::Index maxIndex;
+            float maxVal = out.maxCoeff(&maxIndex);
+            // cout << "Prediction for " << i << ": " << maxIndex << endl;
+            if(maxVal < 0.5) {
+                throw runtime_error("Max value is less than 0.5 for " + to_string(i));
+            }
+            if(maxIndex != i) {
+                throw runtime_error("Max index " + to_string(maxIndex) + "is not " + to_string(i));
+            }
+        }
+
+        //record time
+        double elapsed = (double)chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        //recalculate moving average
+        average_runtime = (average_runtime * ((double)t) + elapsed) / ((double)t+1);
+        cout << "Runtime over " << (t+1) << " trials: " << average_runtime << endl;
+    }
+}
+
+
+
 int main() {
     //Call testing functions as you wish.
 
@@ -812,5 +893,6 @@ int main() {
     // test_hot_swap();
     // test_file_load();
     // test_batch_training();
-    test_dataloader_training();
+    // test_dataloader_training();
+    speed_test();
 }

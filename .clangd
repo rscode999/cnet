@@ -1,0 +1,15 @@
+CompileFlags:
+  Add:
+    - -std=c++14
+    - -fparse-all-comments
+    - -Ieigen5/
+
+Hover:
+  ShowAKA: No
+
+Documentation:
+  CommentFormat: Doxygen
+
+Diagnostics:
+  UnusedIncludes: None
+

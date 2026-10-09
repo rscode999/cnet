@@ -1,7 +1,7 @@
 .gitignore
 .vscode
 *.exe
-eigen5_0_0/
+eigen5/
 test.txt
 *.exe
 old/

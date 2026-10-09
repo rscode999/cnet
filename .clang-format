@@ -1,0 +1,20 @@
+BasedOnStyle: LLVM
+
+# Enable comment formatting and set line width
+ColumnLimit: 80
+ReflowComments: true
+
+# Control how comment blocks are handled
+CommentPragmas: '^ *[A-Za-z0-9_]+:'
+AlignConsecutiveMacros: true
+
+# Optional: Adjust indentation inside comments
+ContinuationIndentWidth: 4
+
+# Enable block comment formatting (adds asterisks)
+IndentWrappedLines: true
+
+InlayHints:
+  Enabled: No
+  ParameterNames: No
+  DeducedTypes: No

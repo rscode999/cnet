@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <random>
 #include <vector>
 
 #include <Eigen/Core>
